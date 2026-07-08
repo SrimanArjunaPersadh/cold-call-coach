@@ -1,0 +1,9 @@
+# Never commit recordings or secrets from the bake-off
+*.m4a
+*.webm
+*.mp3
+*.wav
+*.ogg
+*.mp4
+.env
+.env.*
