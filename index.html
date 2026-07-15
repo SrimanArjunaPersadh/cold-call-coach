@@ -133,6 +133,13 @@
     .result { margin-top: 16px; }
     .result .meta { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
     .result audio { width: 100%; margin-bottom: 12px; }
+    .upload-status {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .upload-status.ok { color: var(--ok); }
+    .upload-status.err { color: var(--err); }
     button.analyze {
       appearance: none; border: none; cursor: pointer;
       background: var(--ok); color: #06210f;
@@ -156,16 +163,206 @@
       font-size: 14px;
       font-style: italic;
     }
+    .turn {
+      border-top: 1px solid var(--border);
+      padding: 12px 0;
+      font-size: 14px;
+    }
+    .turn:first-child { border-top: none; padding-top: 0; }
+    .speaker {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
     .hidden { display: none !important; }
+
+    /* ── Top bar + view tabs ─────────────────────────────── */
+    .topbar { border-bottom: 1px solid var(--border); background: var(--panel); }
+    .topbar-inner {
+      max-width: 1200px; margin: 0 auto; padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .brand h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .tabs {
+      display: inline-flex; gap: 4px; background: var(--panel-2);
+      padding: 4px; border-radius: 999px;
+    }
+    .tab {
+      appearance: none; border: none; cursor: pointer; background: transparent;
+      color: var(--muted); font-size: 13px; font-weight: 600;
+      padding: 7px 16px; border-radius: 999px; transition: background .15s, color .15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { background: var(--accent); color: var(--accent-ink); }
+    .view { padding-bottom: 60px; }
+    #coach-view .wrap { padding-top: 28px; }
+
+    /* ── CRM board (GoHighLevel-style Kanban) ─────────────── */
+    .board-toolbar {
+      max-width: 1200px; margin: 0 auto; padding: 22px 20px 12px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .board-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .pill {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 1px 9px;
+    }
+    .board-actions { display: flex; gap: 8px; }
+    .btn-primary {
+      appearance: none; border: none; cursor: pointer;
+      background: var(--accent); color: var(--accent-ink);
+      font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 8px;
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost {
+      appearance: none; cursor: pointer; background: transparent; color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 14px; font-size: 13px; font-weight: 600;
+    }
+    .btn-ghost:hover { background: var(--panel-2); }
+    .btn-danger {
+      appearance: none; border: none; cursor: pointer; background: transparent; color: var(--err);
+      border: 1px solid rgba(229,83,60,0.5); border-radius: 8px;
+      padding: 8px 14px; font-size: 13px; font-weight: 700;
+    }
+    .btn-danger:hover { background: rgba(229,83,60,0.1); }
+
+    .board {
+      max-width: 1200px; margin: 0 auto; padding: 8px 20px 4px;
+      display: flex; gap: 14px; overflow-x: auto; align-items: flex-start;
+    }
+    .board-hint { max-width: 1200px; margin: 4px auto 0; padding: 0 20px; color: var(--muted); font-size: 12px; }
+
+    .col {
+      flex: 0 0 260px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); border-top: 3px solid var(--col, var(--accent));
+      display: flex; flex-direction: column; max-height: calc(100vh - 230px);
+    }
+    .col-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 12px 14px 8px; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .col-head .count { color: var(--muted); }
+    .col-body {
+      padding: 4px 10px 12px; display: flex; flex-direction: column; gap: 9px;
+      overflow-y: auto; min-height: 56px; flex: 1 1 auto;
+    }
+    .col-body.drop-hint { background: rgba(91,140,255,0.07); }
+    .col-empty { color: var(--muted); font-size: 12px; font-style: italic; text-align: center; padding: 14px 4px; }
+
+    .lead-card {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 11px 12px; cursor: grab; transition: border-color .15s, opacity .1s;
+    }
+    .lead-card:hover { border-color: var(--accent); }
+    .lead-card:active { cursor: grabbing; }
+    .lead-card.dragging { opacity: 0.4; }
+    .lead-name { font-weight: 700; font-size: 14px; }
+    .lead-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .lead-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .lead-chip {
+      font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .lead-note-flag { font-size: 11px; color: var(--accent); margin-top: 8px; }
+
+    /* ── Add / edit modal ─────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 6vh 16px 16px; overflow-y: auto;
+    }
+    .modal {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      width: 100%; max-width: 560px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 12px; border-bottom: 1px solid var(--border);
+    }
+    .modal-head h3 { margin: 0; font-size: 16px; }
+    .modal-close {
+      appearance: none; border: none; background: transparent; color: var(--muted);
+      font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    #lead-form { padding: 16px 20px 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+    .field-wide { margin-top: 12px; }
+    .field span { font-weight: 600; }
+    .field input, .field select, .field textarea {
+      font-family: var(--sans); font-size: 14px; color: var(--text);
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 10px; width: 100%;
+    }
+    .field textarea { resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+    .modal-foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+    .modal-foot .spacer { flex: 1 1 auto; }
+
+    /* ── Toast ─────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+      padding: 10px 16px; border-radius: 10px; font-size: 13px; z-index: 60;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    .toast.err { border-color: rgba(229,83,60,0.6); }
+    .toast.ok  { border-color: rgba(63,178,107,0.6); }
+
+    /* ── CSV import ─────────────────────────────── */
+    .import-drop {
+      border: 1px dashed var(--border); border-radius: 10px; padding: 22px;
+      text-align: center; background: var(--panel-2);
+    }
+    .import-drop.dragover { border-color: var(--accent); background: rgba(91,140,255,0.08); }
+    .import-drop p { margin: 6px 0; font-size: 13px; color: var(--muted); }
+    .import-help { margin-top: 14px; font-size: 12px; color: var(--muted); }
+    .import-help summary { cursor: pointer; font-weight: 600; }
+    .import-help p { margin: 8px 0 0; }
+    .import-help code {
+      font-family: var(--mono); background: rgba(255,255,255,0.06);
+      padding: 1px 5px; border-radius: 5px;
+    }
+    .import-sub {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin: 20px 0 10px;
+    }
+    .import-controls {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 14px; margin-top: 14px; flex-wrap: wrap;
+    }
+    .import-preview { font-size: 13px; color: var(--muted); }
+    .import-preview strong { color: var(--text); font-size: 15px; }
+
+    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header class="app">
-      <h1>Cold-Call Coach</h1>
-      <p>Record one call · get it diarized, scored, and measured.</p>
-    </header>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1>Cold-Call Coach</h1>
+        <p>Record and score your calls · track leads through the pipeline.</p>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button class="tab active" data-view="coach">Coach</button>
+        <button class="tab" data-view="leads">Leads</button>
+      </nav>
+    </div>
+  </header>
 
+  <div id="coach-view" class="view">
+   <div class="wrap">
     <!-- Mic permission state machine renders here (§6) -->
     <section class="panel" id="record-panel">
       <h2>Record</h2>
@@ -199,6 +396,7 @@
         <div class="meta" id="result-meta"></div>
         <audio id="playback" controls></audio>
         <button class="analyze" id="analyze-btn" disabled>Analyze</button>
+        <div class="upload-status hidden" id="upload-status" role="status" aria-live="polite"></div>
       </div>
 
       <label class="nudge">
@@ -208,15 +406,102 @@
     </section>
 
     <!-- Later tasks (§9 steps 3–8) mount below. Empty states for now. -->
-    <section class="panel">
+    <section class="panel" id="transcript-panel">
       <h2>Transcript</h2>
-      <p class="placeholder">No transcript yet.</p>
+      <div id="transcript-body"><p class="placeholder">No transcript yet.</p></div>
     </section>
-    <section class="panel">
+    <section class="panel" id="scores-panel">
       <h2>Scores</h2>
-      <p class="placeholder">Not scored yet.</p>
+      <div id="scores-body"><p class="placeholder">Not scored yet.</p></div>
     </section>
+   </div>
   </div>
+
+  <!-- ── Leads CRM (Kanban board) ─────────────────────────────── -->
+  <div id="leads-view" class="view hidden">
+    <div class="board-toolbar">
+      <div class="board-title">Leads <span id="leads-total" class="pill">0</span></div>
+      <div class="board-actions">
+        <button class="btn-ghost" id="leads-refresh">Refresh</button>
+        <button class="btn-ghost" id="import-csv-btn">Import CSV</button>
+        <button class="btn-primary" id="add-lead-btn">+ Add lead</button>
+      </div>
+    </div>
+    <div class="board" id="board"><!-- columns render here --></div>
+    <p class="board-hint">Drag a card between columns to update its outcome. Click a card to edit details or add notes.</p>
+  </div>
+
+  <!-- Add / edit lead modal -->
+  <div class="modal-overlay hidden" id="lead-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
+      <div class="modal-head">
+        <h3 id="lead-modal-title">Add lead</h3>
+        <button class="modal-close" id="lead-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="lead-form">
+        <div class="form-grid" id="lead-form-fields"><!-- fields injected --></div>
+        <label class="field field-wide">
+          <span>Stage</span>
+          <select id="lead-stage" name="stage"></select>
+        </label>
+        <label class="field field-wide">
+          <span>Notes</span>
+          <textarea name="notes" rows="4" placeholder="Call notes, context, next steps…"></textarea>
+        </label>
+        <div class="modal-foot">
+          <button type="button" class="btn-danger hidden" id="lead-delete">Delete</button>
+          <div class="spacer"></div>
+          <button type="button" class="btn-ghost" id="lead-cancel">Cancel</button>
+          <button type="submit" class="btn-primary" id="lead-save">Save lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Import leads from CSV -->
+  <div class="modal-overlay hidden" id="import-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
+      <div class="modal-head">
+        <h3 id="import-title">Import leads from CSV</h3>
+        <button class="modal-close" id="import-close" aria-label="Close">&times;</button>
+      </div>
+      <div style="padding:16px 20px 20px;">
+        <div class="import-drop" id="import-drop">
+          <input type="file" id="import-file" accept=".csv,text/csv" hidden />
+          <p><strong>Choose a CSV file</strong> or drag it here.</p>
+          <button type="button" class="btn-ghost" id="import-pick">Choose file…</button>
+          <p class="board-hint" id="import-filename" style="padding:0;"></p>
+        </div>
+
+        <details class="import-help">
+          <summary>Tips for making the CSV (Google AI, Sheets, Excel…)</summary>
+          <p>Any column headers work — you'll map them in the next step. Best results with
+          columns like <code>name, business, phone, email, website, industry, notes</code>.
+          The first row must be the headers. Every lead needs a business and a phone number.</p>
+        </details>
+
+        <div id="import-step2" class="hidden">
+          <h4 class="import-sub">Match your columns</h4>
+          <div class="form-grid" id="import-mapping"></div>
+          <div class="import-controls">
+            <label class="field" style="max-width:220px;">
+              <span>Put imported leads in</span>
+              <select id="import-stage"></select>
+            </label>
+            <div class="import-preview">Will import <strong id="import-count">0</strong> leads.</div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="spacer"></div>
+          <button type="button" class="btn-ghost" id="import-cancel">Cancel</button>
+          <button type="button" class="btn-primary" id="import-run" disabled>Import leads</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
   <script>
   // ── Mic-permission state machine (PHASE1-DESIGN §6) ──────────────────
@@ -242,6 +527,9 @@
     resultMeta: document.getElementById('result-meta'),
     playback:   document.getElementById('playback'),
     analyze:    document.getElementById('analyze-btn'),
+    uploadStatus: document.getElementById('upload-status'),
+    transcriptBody: document.getElementById('transcript-body'),
+    scoresBody:     document.getElementById('scores-body'),
   };
 
   // State → presentation. `record` = is the Record button enabled.
@@ -437,6 +725,7 @@
     els.playback.src = URL.createObjectURL(blob);
     els.resultMeta.textContent = `Recording ready · ${fmtTime(seconds)} · ${fmtSize(blob.size)} · ${type}`;
     els.analyze.disabled = false;
+    setUploadStatus('', '');
     els.result.classList.remove('hidden');
     els.hint.textContent = 'Recorded. Click Analyze, or Record again to redo.';
 
@@ -486,16 +775,639 @@
   }
   function cleanup() { stopTimer(); stopMeter(); cleanupStream(); }
 
+  function setUploadStatus(tone, text) {
+    els.uploadStatus.textContent = text;
+    els.uploadStatus.className = 'upload-status' + (tone ? ' ' + tone : '');
+    els.uploadStatus.classList.toggle('hidden', !text);
+  }
+
+  function renderTranscript(turns) {
+    if (!turns || !turns.length) {
+      els.transcriptBody.innerHTML = '<p class="placeholder">No transcript returned.</p>';
+      return;
+    }
+
+    els.transcriptBody.innerHTML = turns.map((turn) => `
+      <div class="turn">
+        <div class="speaker">Speaker ${turn.speaker} · ${fmtTime(turn.start)}-${fmtTime(turn.end)}</div>
+        <div>${escapeHtml(turn.text)}</div>
+      </div>
+    `).join('');
+  }
+
+  // Human labels for the six fixed Hormozi dimensions (PHASE1-DESIGN §5a).
+  const DIMENSION_LABELS = {
+    opener_pattern_interrupt: 'Opener / pattern interrupt',
+    offer_clarity:            'Offer clarity',
+    problem_tie:              'Problem tie',
+    objection_handling:       'Objection handling',
+    close_or_cta:             'Close / CTA',
+    permission_and_framing:   'Permission & framing',
+  };
+
+  function renderScores(scores) {
+    if (!scores || !Array.isArray(scores.dimensions)) {
+      els.scoresBody.innerHTML = '<p class="placeholder">No scores returned.</p>';
+      return;
+    }
+
+    const cards = scores.dimensions.map((d) => `
+      <div class="turn">
+        <div class="speaker">${escapeHtml(DIMENSION_LABELS[d.key] || d.key)} · ${d.score}/5</div>
+        ${d.evidence ? `<div><em>&ldquo;${escapeHtml(d.evidence)}&rdquo;</em></div>` : ''}
+        <div>${escapeHtml(d.fix)}</div>
+      </div>
+    `).join('');
+
+    els.scoresBody.innerHTML = `
+      <p><strong>Overall: ${scores.overall_score}/5</strong></p>
+      <p><strong>Top fix:</strong> ${escapeHtml(scores.top_fix)}</p>
+      ${cards}`;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  async function analyzeRecording() {
+    if (!recording) return;
+    els.analyze.disabled = true;
+    setUploadStatus('', 'Creating upload slot...');
+    els.hint.textContent = 'Saving the recording before transcription.';
+
+    try {
+      const createRes = await fetch('/api/create-upload', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          duration_seconds: recording.seconds,
+          mime_type: recording.mime,
+          offer_context: localStorage.getItem('offer_context_default') || '',
+        }),
+      });
+      const createJson = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) throw new Error(createJson.error || 'Could not create upload.');
+
+      setUploadStatus('', 'Uploading audio to private storage...');
+      const uploadUrl = createJson.signed_upload_url;
+      if (!uploadUrl) throw new Error('Upload URL missing from server response.');
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'content-type': recording.mime || 'audio/webm' },
+        body: recording.blob,
+      });
+      if (!uploadRes.ok) {
+        const detail = await uploadRes.text().catch(() => '');
+        throw new Error(detail || `Upload failed with ${uploadRes.status}.`);
+      }
+
+      setUploadStatus('ok', `Saved recording ${createJson.call_id}. Transcribing & scoring… (10–60s)`);
+      els.hint.textContent = 'Recording saved. Deepgram is transcribing, then Claude scores the rubric.';
+
+      const analyzeRes = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ call_id: createJson.call_id }),
+      });
+      const analyzeJson = await analyzeRes.json().catch(() => ({}));
+      if (!analyzeRes.ok) throw new Error(analyzeJson.error || 'Could not make transcript.');
+
+      renderTranscript(analyzeJson.transcript);
+      renderScores(analyzeJson.rubric_scores);
+      setUploadStatus('ok', `Transcript and coaching scores ready for recording ${createJson.call_id}.`);
+      els.hint.textContent = 'Transcript and coaching scores ready.';
+    } catch (err) {
+      setUploadStatus('err', err.message || 'Upload failed.');
+      els.hint.textContent = 'Upload failed. Your local recording is still here; you can retry Analyze.';
+      els.analyze.disabled = false;
+    }
+  }
+
   els.record.addEventListener('click', onRecordClick);
   els.retry.addEventListener('click', async () => { render(await detectMicState()); });
-  els.analyze.addEventListener('click', () => {
-    if (!recording) return;
-    // Upload (task 4) + Deepgram/Haiku scoring (task 5) mount here.
-    els.hint.textContent = `Blob ready (${fmtSize(recording.blob.size)}, ${recording.seconds}s). Upload + scoring arrive in tasks 4–5.`;
-  });
+  els.analyze.addEventListener('click', analyzeRecording);
 
   // Boot.
   (async () => { render(await detectMicState()); })();
+
+  // ══ Leads CRM — GoHighLevel-style Kanban ═══════════════════════════
+  // Columns are pipeline stages; dragging a card PATCHes its stage. All
+  // secret keys stay server-side in /api/leads — this only talks to that.
+
+  const STAGES = [
+    { key: 'new',            label: 'New',                 color: '#5b8cff' },
+    { key: 'no_answer',      label: 'No answer / VM',      color: '#9aa1ad' },
+    { key: 'callback',       label: 'Call back requested', color: '#e0a83a' },
+    { key: 'interested',     label: 'Interested',          color: '#3fb26b' },
+    { key: 'booked',         label: 'Booked meeting',      color: '#2bb673' },
+    { key: 'not_interested', label: 'Not interested',      color: '#e5533c' },
+  ];
+
+  // Text fields for the add/edit form (notes + stage handled separately).
+  const LEAD_FORM_FIELDS = [
+    { key: 'name',     label: 'Contact name', type: 'text' },
+    { key: 'business', label: 'Business',     type: 'text', required: true },
+    { key: 'phone',    label: 'Phone',        type: 'tel',  required: true },
+    { key: 'email',    label: 'Email',        type: 'email' },
+    { key: 'website',  label: 'Website URL',  type: 'url' },
+    { key: 'industry', label: 'Industry',     type: 'text' },
+  ];
+
+  const crm = { leads: [], loaded: false, editingId: null, dragId: null };
+  const crmEls = {
+    board:      document.getElementById('board'),
+    total:      document.getElementById('leads-total'),
+    addBtn:     document.getElementById('add-lead-btn'),
+    refreshBtn: document.getElementById('leads-refresh'),
+    modal:      document.getElementById('lead-modal'),
+    modalTitle: document.getElementById('lead-modal-title'),
+    form:       document.getElementById('lead-form'),
+    formFields: document.getElementById('lead-form-fields'),
+    stage:      document.getElementById('lead-stage'),
+    deleteBtn:  document.getElementById('lead-delete'),
+    saveBtn:    document.getElementById('lead-save'),
+    toast:      document.getElementById('toast'),
+  };
+
+  // Build the form fields + stage options once.
+  crmEls.formFields.innerHTML = LEAD_FORM_FIELDS.map((f) => `
+    <label class="field">
+      <span>${f.label}${f.required ? ' *' : ''}</span>
+      <input name="${f.key}" type="${f.type}" ${f.required ? 'required' : ''} />
+    </label>`).join('');
+  crmEls.stage.innerHTML = STAGES.map((s) => `<option value="${s.key}">${s.label}</option>`).join('');
+
+  // View tabs (Coach ↔ Leads).
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    const view = btn.dataset.view;
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === btn));
+    document.getElementById('coach-view').classList.toggle('hidden', view !== 'coach');
+    document.getElementById('leads-view').classList.toggle('hidden', view !== 'leads');
+    if (view === 'leads' && !crm.loaded) loadLeads();
+  });
+
+  let toastTimer = 0;
+  function toast(msg, tone) {
+    crmEls.toast.textContent = msg;
+    crmEls.toast.className = 'toast' + (tone ? ' ' + tone : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => crmEls.toast.classList.add('hidden'), 3200);
+  }
+
+  // All /api/leads calls go through here. The serverless functions only exist
+  // under `vercel dev` / Vercel — if the app is opened via a plain static
+  // server (VS Code Live Server, `python -m http.server`, file://), the route
+  // 404s with an HTML page instead of our JSON { error }. Detect that and say
+  // so, rather than surfacing a useless generic failure.
+  async function leadsApi(path, options, fallbackMsg) {
+    let res;
+    try {
+      res = await fetch(path, options);
+    } catch (_) {
+      throw new Error('Cannot reach the server. Is `vercel dev` running?');
+    }
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      // Not our function — almost always a static file server serving the app.
+      throw new Error('API not found — run `vercel dev`, not a static server (e.g. Live Server).');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || fallbackMsg || 'Request failed');
+    return data;
+  }
+
+  const leadById = (id) => crm.leads.find((l) => String(l.id) === String(id));
+  const cleanUrl = (u) => String(u).replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  async function loadLeads() {
+    try {
+      const data = await leadsApi('/api/leads', undefined, 'Could not load leads');
+      crm.leads = data.leads || [];
+      crm.loaded = true;
+      renderBoard();
+    } catch (err) {
+      crmEls.board.innerHTML = `<p class="board-hint">${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  function renderBoard() {
+    crmEls.total.textContent = crm.leads.length;
+    crmEls.board.innerHTML = STAGES.map((stage) => {
+      const items = crm.leads
+        .filter((l) => (l.stage || 'new') === stage.key)
+        .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
+      const cards = items.length
+        ? items.map(cardHtml).join('')
+        : '<div class="col-empty">Drop leads here</div>';
+      return `
+        <div class="col" style="--col:${stage.color}">
+          <div class="col-head"><span>${stage.label}</span><span class="count">${items.length}</span></div>
+          <div class="col-body" data-stage="${stage.key}">${cards}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function cardHtml(l) {
+    const chips = [];
+    if (l.phone) chips.push(l.phone);
+    if (l.website) chips.push(cleanUrl(l.website));
+    if (l.industry) chips.push(l.industry);
+    const title = l.name || l.business || 'Untitled lead';
+    const sub = (l.name && l.business) ? l.business : '';
+    return `
+      <div class="lead-card" draggable="true" data-id="${l.id}" data-position="${l.position != null ? l.position : 0}">
+        <div class="lead-name">${escapeHtml(title)}</div>
+        ${sub ? `<div class="lead-sub">${escapeHtml(sub)}</div>` : ''}
+        ${chips.length ? `<div class="lead-meta">${chips.map((c) => `<span class="lead-chip">${escapeHtml(c)}</span>`).join('')}</div>` : ''}
+        ${l.notes ? '<div class="lead-note-flag">📝 Has notes</div>' : ''}
+      </div>`;
+  }
+
+  // ── Drag & drop (native HTML5, event-delegated so re-renders keep working) ──
+  function getDragAfterElement(container, y) {
+    const cards = [...container.querySelectorAll('.lead-card:not(.dragging)')];
+    return cards.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
+    }, { offset: -Infinity, element: null }).element;
+  }
+
+  // Midpoint of neighbours → reorder writes only the moved row.
+  function positionWithin(body, id) {
+    const cards = [...body.querySelectorAll('.lead-card')];
+    const idx = cards.findIndex((c) => c.dataset.id === String(id));
+    const prev = cards[idx - 1], next = cards[idx + 1];
+    const prevPos = prev ? Number(prev.dataset.position) : null;
+    const nextPos = next ? Number(next.dataset.position) : null;
+    if (prevPos == null && nextPos == null) return 1000;
+    if (prevPos == null) return nextPos - 1000;
+    if (nextPos == null) return prevPos + 1000;
+    return (prevPos + nextPos) / 2;
+  }
+
+  crmEls.board.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.lead-card');
+    if (!card) return;
+    crm.dragId = card.dataset.id;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', card.dataset.id); } catch (_) {}
+  });
+
+  crmEls.board.addEventListener('dragend', (e) => {
+    const card = e.target.closest('.lead-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.col-body.drop-hint').forEach((c) => c.classList.remove('drop-hint'));
+    crm.dragId = null;
+  });
+
+  crmEls.board.addEventListener('dragover', (e) => {
+    const body = e.target.closest('.col-body');
+    if (!body) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.col-body.drop-hint').forEach((c) => { if (c !== body) c.classList.remove('drop-hint'); });
+    body.classList.add('drop-hint');
+    const dragging = crmEls.board.querySelector('.lead-card.dragging');
+    if (!dragging) return;
+    const after = getDragAfterElement(body, e.clientY);
+    if (after == null) body.appendChild(dragging);
+    else body.insertBefore(dragging, after);
+  });
+
+  crmEls.board.addEventListener('drop', (e) => {
+    const body = e.target.closest('.col-body');
+    if (!body) return;
+    e.preventDefault();
+    body.classList.remove('drop-hint');
+    const id = crm.dragId;
+    const lead = id && leadById(id);
+    if (!lead) return;
+    const prevStage = lead.stage, prevPos = lead.position;
+    lead.stage = body.dataset.stage;
+    lead.position = positionWithin(body, id);
+    renderBoard();
+    if (lead.stage === prevStage && lead.position === prevPos) return;
+    persistMove(lead, prevStage, prevPos);
+  });
+
+  async function persistMove(lead, prevStage, prevPos) {
+    try {
+      await leadsApi(
+        `/api/leads?id=${encodeURIComponent(lead.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ stage: lead.stage, position: lead.position }),
+        },
+        'Move failed'
+      );
+    } catch (err) {
+      lead.stage = prevStage; lead.position = prevPos; // revert optimistic move
+      renderBoard();
+      toast(err.message || 'Could not move lead', 'err');
+    }
+  }
+
+  // Click a card → edit. (Native drag suppresses the click, so no conflict.)
+  crmEls.board.addEventListener('click', (e) => {
+    const card = e.target.closest('.lead-card');
+    if (!card) return;
+    const lead = leadById(card.dataset.id);
+    if (lead) openLeadModal(lead);
+  });
+
+  // ── Add / edit modal ──
+  function openLeadModal(lead) {
+    crm.editingId = lead ? lead.id : null;
+    crmEls.modalTitle.textContent = lead ? 'Edit lead' : 'Add lead';
+    crmEls.deleteBtn.classList.toggle('hidden', !lead);
+    const el = crmEls.form.elements;
+    LEAD_FORM_FIELDS.forEach((f) => { el[f.key].value = lead && lead[f.key] != null ? lead[f.key] : ''; });
+    el.notes.value = lead && lead.notes ? lead.notes : '';
+    crmEls.stage.value = lead ? (lead.stage || 'new') : 'new';
+    crmEls.modal.classList.remove('hidden');
+    setTimeout(() => el.name.focus(), 30);
+  }
+  function closeLeadModal() {
+    crmEls.modal.classList.add('hidden');
+    crm.editingId = null;
+  }
+
+  crmEls.form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const el = crmEls.form.elements;
+    const payload = { stage: crmEls.stage.value, notes: el.notes.value.trim() };
+    LEAD_FORM_FIELDS.forEach((f) => { payload[f.key] = el[f.key].value.trim(); });
+    if (!payload.business || !payload.phone) { toast('Business and phone are required', 'err'); return; }
+
+    crmEls.saveBtn.disabled = true;
+    try {
+      if (crm.editingId) {
+        const data = await leadsApi(
+          `/api/leads?id=${encodeURIComponent(crm.editingId)}`,
+          {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+          'Could not save lead'
+        );
+        const idx = crm.leads.findIndex((l) => l.id === crm.editingId);
+        if (idx >= 0) crm.leads[idx] = data.lead;
+        toast('Lead updated', 'ok');
+      } else {
+        const data = await leadsApi(
+          '/api/leads',
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+          'Could not create lead'
+        );
+        crm.leads.push(data.lead);
+        toast('Lead added', 'ok');
+      }
+      renderBoard();
+      closeLeadModal();
+    } catch (err) {
+      toast(err.message || 'Save failed', 'err');
+    } finally {
+      crmEls.saveBtn.disabled = false;
+    }
+  });
+
+  crmEls.deleteBtn.addEventListener('click', async () => {
+    if (!crm.editingId) return;
+    if (!confirm('Delete this lead? This cannot be undone.')) return;
+    try {
+      await leadsApi(`/api/leads?id=${encodeURIComponent(crm.editingId)}`, { method: 'DELETE' }, 'Could not delete lead');
+      crm.leads = crm.leads.filter((l) => l.id !== crm.editingId);
+      renderBoard();
+      closeLeadModal();
+      toast('Lead deleted', 'ok');
+    } catch (err) {
+      toast(err.message || 'Delete failed', 'err');
+    }
+  });
+
+  crmEls.addBtn.addEventListener('click', () => openLeadModal(null));
+  crmEls.refreshBtn.addEventListener('click', loadLeads);
+  document.getElementById('lead-modal-close').addEventListener('click', closeLeadModal);
+  document.getElementById('lead-cancel').addEventListener('click', closeLeadModal);
+  crmEls.modal.addEventListener('click', (e) => { if (e.target === crmEls.modal) closeLeadModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !crmEls.modal.classList.contains('hidden')) closeLeadModal();
+  });
+
+  // ══ CSV import ═════════════════════════════════════════════════════
+  // Parse client-side, auto-guess the column mapping, preview, then bulk
+  // insert via POST /api/leads { leads: [...] }. The file never leaves the
+  // browser except as that final insert to your own Supabase.
+
+  const IMPORT_FIELDS = [...LEAD_FORM_FIELDS, { key: 'notes', label: 'Notes' }];
+
+  // Header synonyms → auto-guess which CSV column feeds which field.
+  const FIELD_SYNONYMS = {
+    name:     ['name','contact','contact name','full name','person','lead','contact person','first name'],
+    business: ['business','company','company name','business name','organization','organisation','account'],
+    phone:    ['phone','phone number','number','tel','telephone','mobile','cell','contact number'],
+    email:    ['email','email address','e mail','mail'],
+    website:  ['website','url','web','site','website url','domain','web address','link'],
+    industry: ['industry','sector','niche','vertical','category'],
+    notes:    ['notes','note','comments','description','details','remarks','info'],
+  };
+
+  const importState = { headers: [], rows: [] };
+  const importEls = {
+    modal:    document.getElementById('import-modal'),
+    file:     document.getElementById('import-file'),
+    pick:     document.getElementById('import-pick'),
+    drop:     document.getElementById('import-drop'),
+    filename: document.getElementById('import-filename'),
+    step2:    document.getElementById('import-step2'),
+    mapping:  document.getElementById('import-mapping'),
+    stage:    document.getElementById('import-stage'),
+    count:    document.getElementById('import-count'),
+    runBtn:   document.getElementById('import-run'),
+  };
+  importEls.stage.innerHTML = STAGES.map((s) => `<option value="${s.key}">${s.label}</option>`).join('');
+
+  // RFC-4180-ish parser: handles quoted fields, "" escapes, and CRLF.
+  function parseCSV(text) {
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c !== '\r') field += c;
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  const normHeader = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  // Returns { field: headerIndex }. Two passes: exact header match, then
+  // partial — never reusing a column already claimed.
+  function autoMap(headers) {
+    const nh = headers.map(normHeader);
+    const used = new Set();
+    const map = {};
+    const fields = Object.keys(FIELD_SYNONYMS);
+    for (const field of fields) {
+      for (const syn of FIELD_SYNONYMS[field]) {
+        const idx = nh.findIndex((h, i) => !used.has(i) && h === syn);
+        if (idx >= 0) { map[field] = idx; used.add(idx); break; }
+      }
+    }
+    for (const field of fields) {
+      if (map[field] != null) continue;
+      for (let i = 0; i < nh.length; i++) {
+        if (used.has(i) || !nh[i]) continue;
+        if (FIELD_SYNONYMS[field].some((syn) => nh[i].includes(syn) || syn.includes(nh[i]))) {
+          map[field] = i; used.add(i); break;
+        }
+      }
+    }
+    return map;
+  }
+
+  function renderImportMapping() {
+    const headers = importState.headers;
+    const guess = autoMap(headers);
+    importEls.mapping.innerHTML = IMPORT_FIELDS.map((f) => {
+      const g = guess[f.key];
+      const opts = ['<option value="">— skip —</option>'].concat(
+        headers.map((h, i) =>
+          `<option value="${i}" ${i === g ? 'selected' : ''}>${escapeHtml(h || ('Column ' + (i + 1)))}</option>`)
+      );
+      return `<label class="field"><span>${f.label}${f.required ? ' *' : ''}</span>
+        <select data-field="${f.key}">${opts.join('')}</select></label>`;
+    }).join('');
+    importEls.step2.classList.remove('hidden');
+    updateImportPreview();
+  }
+
+  function buildImportLeads() {
+    const map = {};
+    importEls.mapping.querySelectorAll('select[data-field]').forEach((sel) => {
+      if (sel.value !== '') map[sel.dataset.field] = Number(sel.value);
+    });
+    const stage = importEls.stage.value;
+    const leads = [];
+    for (const row of importState.rows) {
+      const lead = {};
+      for (const field in map) {
+        const v = (row[map[field]] || '').trim();
+        if (v) lead[field] = v;
+      }
+      if (!lead.business || !lead.phone) continue; // need business + phone
+      lead.stage = stage;
+      leads.push(lead);
+    }
+    return leads;
+  }
+
+  function updateImportPreview() {
+    const n = buildImportLeads().length;
+    importEls.count.textContent = n;
+    importEls.runBtn.disabled = n === 0;
+  }
+
+  importEls.mapping.addEventListener('change', updateImportPreview);
+  importEls.stage.addEventListener('change', updateImportPreview);
+
+  async function handleImportFile(file) {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const table = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ''));
+      if (table.length < 2) { toast('CSV needs a header row and at least one data row', 'err'); return; }
+      importState.headers = table[0].map((h) => h.trim());
+      importState.rows = table.slice(1);
+      importEls.filename.textContent = `${file.name} · ${importState.rows.length} data rows`;
+      renderImportMapping();
+    } catch (_) {
+      toast('Could not read that file', 'err');
+    }
+  }
+
+  importEls.pick.addEventListener('click', () => importEls.file.click());
+  importEls.file.addEventListener('change', (e) => handleImportFile(e.target.files[0]));
+  importEls.drop.addEventListener('dragover', (e) => { e.preventDefault(); importEls.drop.classList.add('dragover'); });
+  importEls.drop.addEventListener('dragleave', () => importEls.drop.classList.remove('dragover'));
+  importEls.drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    importEls.drop.classList.remove('dragover');
+    handleImportFile(e.dataTransfer.files[0]);
+  });
+
+  function openImportModal() {
+    importState.headers = []; importState.rows = [];
+    importEls.file.value = '';
+    importEls.filename.textContent = '';
+    importEls.mapping.innerHTML = '';
+    importEls.step2.classList.add('hidden');
+    importEls.runBtn.disabled = true;
+    importEls.stage.value = 'new';
+    importEls.modal.classList.remove('hidden');
+  }
+  function closeImportModal() { importEls.modal.classList.add('hidden'); }
+
+  importEls.runBtn.addEventListener('click', async () => {
+    const leads = buildImportLeads();
+    if (!leads.length) return;
+    importEls.runBtn.disabled = true;
+    try {
+      const data = await leadsApi(
+        '/api/leads',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ leads }),
+        },
+        'Import failed'
+      );
+      (data.leads || []).forEach((l) => crm.leads.push(l));
+      renderBoard();
+      closeImportModal();
+      toast(`Imported ${data.imported} lead${data.imported === 1 ? '' : 's'}` +
+        (data.skipped ? ` · skipped ${data.skipped} missing business or phone` : ''), 'ok');
+    } catch (err) {
+      toast(err.message || 'Import failed', 'err');
+      importEls.runBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('import-csv-btn').addEventListener('click', openImportModal);
+  document.getElementById('import-close').addEventListener('click', closeImportModal);
+  document.getElementById('import-cancel').addEventListener('click', closeImportModal);
+  importEls.modal.addEventListener('click', (e) => { if (e.target === importEls.modal) closeImportModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !importEls.modal.classList.contains('hidden')) closeImportModal();
+  });
+
+  renderBoard(); // empty columns until the Leads tab loads data
   </script>
 </body>
 </html>
