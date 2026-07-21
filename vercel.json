@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/scrape-leads.js": {
+      "maxDuration": 60
+    }
+  }
+}
