@@ -1,4 +1,5 @@
 const { encodeStoragePath, getBucket, requireEnv, supabaseFetch } = require("./_supabase");
+const { requireSecret } = require("./_auth");
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -169,6 +170,8 @@ async function markError(callId, message) {
 }
 
 module.exports = async function handler(req, res) {
+  if (!requireSecret(req, res)) return;
+
   if (req.method !== "POST") {
     res.setHeader("allow", "POST");
     return json(res, 405, { error: "Method not allowed" });

@@ -1,4 +1,5 @@
 const { requireEnv, supabaseFetch } = require("./_supabase");
+const { requireSecret } = require("./_auth");
 
 const DEFAULT_USER_ID = "solo";
 
@@ -68,6 +69,8 @@ function pickFields(payload) {
 }
 
 module.exports = async function handler(req, res) {
+  if (!requireSecret(req, res)) return;
+
   const userId = process.env.PHASE1_USER_ID || DEFAULT_USER_ID;
 
   try {
