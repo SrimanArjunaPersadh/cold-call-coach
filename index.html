@@ -66,6 +66,8 @@
     /* Touch targets ≥44px on touch devices */
     @media (pointer: coarse) {
       button, select, input:not([type="checkbox"]) { min-height: 44px; }
+      /* Comfortable tap area for the clickable website chip */
+      .lead-chip-link { display: inline-flex; align-items: center; min-height: 44px; }
     }
     .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
 
@@ -410,6 +412,8 @@
       border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px;
       max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    .lead-chip-link { color: var(--accent); text-decoration: none; cursor: pointer; }
+    .lead-chip-link:hover { text-decoration: underline; }
     .lead-note-flag { font-size: 11px; color: var(--accent); margin-top: 8px; }
 
     /* ── Add / edit modal ─────────────────────────────── */
@@ -1168,6 +1172,8 @@
 
   const leadById = (id) => crm.leads.find((l) => String(l.id) === String(id));
   const cleanUrl = (u) => String(u).replace(/^https?:\/\//, '').replace(/\/$/, '');
+  // Normalise for the href only (stored text is untouched): add a scheme if missing.
+  const normalizeHref = (u) => { const v = String(u).trim(); return /^https?:\/\//i.test(v) ? v : `https://${v}`; };
 
   async function loadLeads() {
     try {
@@ -1199,16 +1205,18 @@
 
   function cardHtml(l) {
     const chips = [];
-    if (l.phone) chips.push(l.phone);
-    if (l.website) chips.push(cleanUrl(l.website));
-    if (l.industry) chips.push(l.industry);
+    if (l.phone) chips.push(`<span class="lead-chip">${escapeHtml(l.phone)}</span>`);
+    if (l.website) chips.push(
+      `<a class="lead-chip lead-chip-link" href="${escapeHtml(normalizeHref(l.website))}" target="_blank" rel="noopener noreferrer" draggable="false">${escapeHtml(cleanUrl(l.website))}</a>`
+    );
+    if (l.industry) chips.push(`<span class="lead-chip">${escapeHtml(l.industry)}</span>`);
     const title = l.name || l.business || 'Untitled lead';
     const sub = (l.name && l.business) ? l.business : '';
     return `
       <div class="lead-card" draggable="true" data-id="${l.id}" data-position="${l.position != null ? l.position : 0}">
         <div class="lead-name">${escapeHtml(title)}</div>
         ${sub ? `<div class="lead-sub">${escapeHtml(sub)}</div>` : ''}
-        ${chips.length ? `<div class="lead-meta">${chips.map((c) => `<span class="lead-chip">${escapeHtml(c)}</span>`).join('')}</div>` : ''}
+        ${chips.length ? `<div class="lead-meta">${chips.join('')}</div>` : ''}
         ${l.notes ? '<div class="lead-note-flag">📝 Has notes</div>' : ''}
       </div>`;
   }
@@ -1300,6 +1308,15 @@
       toast(err.message || 'Could not move lead', 'err');
     }
   }
+
+  // Website chip is a real link: let it navigate, but keep the card's click
+  // (edit modal) and drag handlers from firing. Capture phase + stopPropagation
+  // intercepts before the delegated handlers on the board see the event.
+  ['click', 'mousedown', 'dragstart'].forEach((type) => {
+    crmEls.board.addEventListener(type, (e) => {
+      if (e.target.closest('.lead-chip-link')) e.stopPropagation();
+    }, true);
+  });
 
   // Click a card → edit. (Native drag suppresses the click, so no conflict.)
   crmEls.board.addEventListener('click', (e) => {
