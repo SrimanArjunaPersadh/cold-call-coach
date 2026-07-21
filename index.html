@@ -365,6 +365,8 @@
       display: flex; gap: 14px; overflow-x: auto; align-items: flex-start;
       scroll-snap-type: x proximity;
     }
+    /* Snap fights programmatic scrolling; suspend it while a card is mid-drag. */
+    .board.dragging-active { scroll-snap-type: none; }
     .board-hint { max-width: 1200px; margin: 6px auto 0; padding: 0 20px; color: var(--text-lo); font-size: 12px; }
 
     .col {
@@ -1237,6 +1239,51 @@
     return (prevPos + nextPos) / 2;
   }
 
+  // ── Edge auto-scroll while a card is mid-drag ───────────────────────────────
+  // The board is a horizontal scroll container; on mobile its columns are 84vw
+  // swipe-snap cards, so the drop target is usually off-screen. When the drag
+  // point nears the left/right edge we scroll the board that way — faster the
+  // closer it gets — until the point leaves the zone or the drag ends. Fed by
+  // the native drag position (desktop + Android) and, as a fallback, by touch.
+  let autoScrollPointerX = null;
+  let autoScrollRAF = null;
+
+  function startAutoScroll() {
+    crmEls.board.classList.add('dragging-active'); // suspend scroll-snap
+    if (autoScrollRAF == null) autoScrollRAF = requestAnimationFrame(autoScrollTick);
+  }
+  function stopAutoScroll() {
+    if (autoScrollRAF != null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
+    autoScrollPointerX = null;
+    crmEls.board.classList.remove('dragging-active'); // restore scroll-snap
+  }
+  function autoScrollTick() {
+    if (!crm.dragId) { autoScrollRAF = null; return; }
+    const board = crmEls.board;
+    if (autoScrollPointerX != null) {
+      const rect = board.getBoundingClientRect();
+      const zone = rect.width * 0.15;        // outer 15% on each side
+      const maxSpeed = 18;                   // px/frame at the very edge
+      const fromLeft = autoScrollPointerX - rect.left;
+      const fromRight = rect.right - autoScrollPointerX;
+      let dx = 0;
+      if (fromLeft < zone) dx = -maxSpeed * Math.min(1, (zone - fromLeft) / zone);
+      else if (fromRight < zone) dx = maxSpeed * Math.min(1, (zone - fromRight) / zone);
+      if (dx !== 0) board.scrollLeft += dx;
+    }
+    autoScrollRAF = requestAnimationFrame(autoScrollTick);
+  }
+
+  // Position feeders: native drag fires `drag` on the source and `dragover` as it
+  // passes elements (both carry clientX, even over board gaps/edges); touchmove
+  // covers a touch-driven drag. Passive — reading only, so vertical scroll is safe.
+  crmEls.board.addEventListener('drag', (e) => {
+    if (crm.dragId && (e.clientX || e.clientY)) autoScrollPointerX = e.clientX;
+  });
+  crmEls.board.addEventListener('touchmove', (e) => {
+    if (crm.dragId && e.touches[0]) autoScrollPointerX = e.touches[0].clientX;
+  }, { passive: true });
+
   crmEls.board.addEventListener('dragstart', (e) => {
     const card = e.target.closest('.lead-card');
     if (!card) return;
@@ -1244,6 +1291,8 @@
     card.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
     try { e.dataTransfer.setData('text/plain', card.dataset.id); } catch (_) {}
+    autoScrollPointerX = e.clientX;
+    startAutoScroll();
   });
 
   crmEls.board.addEventListener('dragend', (e) => {
@@ -1251,9 +1300,11 @@
     if (card) card.classList.remove('dragging');
     document.querySelectorAll('.col-body.drop-hint').forEach((c) => c.classList.remove('drop-hint'));
     crm.dragId = null;
+    stopAutoScroll();
   });
 
   crmEls.board.addEventListener('dragover', (e) => {
+    if (crm.dragId) autoScrollPointerX = e.clientX;
     const body = e.target.closest('.col-body');
     if (!body) return;
     e.preventDefault();
@@ -1272,6 +1323,7 @@
     if (!body) return;
     e.preventDefault();
     body.classList.remove('drop-hint');
+    stopAutoScroll();
     const id = crm.dragId;
     const lead = id && leadById(id);
     if (!lead) return;
