@@ -1,6 +1,7 @@
 const DEFAULT_BUCKET = "recordings";
 const DEFAULT_USER_ID = "solo";
 const { encodeStoragePath, requireEnv, supabaseFetch } = require("./_supabase");
+const { requireSecret } = require("./_auth");
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -9,6 +10,8 @@ function json(res, status, body) {
 }
 
 module.exports = async function handler(req, res) {
+  if (!requireSecret(req, res)) return;
+
   if (req.method !== "POST") {
     res.setHeader("allow", "POST");
     return json(res, 405, { error: "Method not allowed" });

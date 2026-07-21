@@ -68,7 +68,7 @@ alter table leads alter column name drop not null;
 
 ## Environment
 
-Copy `.env.example` to `.env.local` for local Vercel dev, then fill in:
+Copy `.env.example` for local Vercel dev, then fill in:
 
 ```text
 SUPABASE_URL
@@ -77,7 +77,19 @@ SUPABASE_RECORDINGS_BUCKET
 PHASE1_USER_ID
 DEEPGRAM_API_KEY
 ANTHROPIC_API_KEY
+APP_SECRET
 ```
+
+> **Where `vercel dev` reads these:** this project is linked to a Vercel
+> project (`.vercel/`), and `vercel dev` picks up local vars from **`.env`**.
+> Keep `.env` and `.env.local` in sync — put every var in **both** (they are
+> both git-ignored). A var added to only one of them may not reach the running
+> functions, and `vercel dev` must be **restarted** after any change.
+
+`APP_SECRET` is the shared passphrase that gates every `/api` route (sent by the
+browser as the `x-app-secret` header). If it is unset on the server, the API
+fails closed (503) — set it locally (in `.env` / `.env.local`, restart
+`vercel dev`) and in the Vercel dashboard for production (then redeploy).
 
 Never put the service role key in `index.html` or any browser code.
 
