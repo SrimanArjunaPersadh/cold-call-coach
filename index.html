@@ -398,7 +398,7 @@
 
     .lead-card {
       background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 11px 12px; cursor: grab;
+      padding: 11px 12px; cursor: grab; touch-action: none; /* touch-action: pointer drag owns the gesture, don't page-scroll */
       transition: border-color .15s, background .15s, opacity .1s;
     }
     .lead-card:hover { border-color: var(--accent); background: var(--bg-3); }
@@ -597,6 +597,7 @@
       <div class="board-actions">
         <button class="btn-ghost" id="leads-refresh">Refresh</button>
         <button class="btn-ghost" id="import-csv-btn">Import CSV</button>
+        <button class="btn-ghost" id="find-leads-btn">Find leads</button>
         <button class="btn-primary" id="add-lead-btn">+ Add lead</button>
       </div>
     </div>
@@ -671,6 +672,39 @@
           <button type="button" class="btn-primary" id="import-run" disabled>Import leads</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Find leads on Google Maps (via Apify) -->
+  <div class="modal-overlay hidden" id="scrape-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scrape-title">
+      <div class="modal-head">
+        <h3 id="scrape-title">Find leads on Google Maps</h3>
+        <button class="modal-close" id="scrape-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="scrape-form">
+        <div class="modal-body">
+          <p class="board-hint" style="margin-top:0">Search Google Maps for businesses and add them straight to your board. Phone, website, address and rating come in automatically.</p>
+          <label class="field field-wide">
+            <span>What are you looking for? *</span>
+            <input id="scrape-keyword" name="keyword" type="text" placeholder="e.g. dentist, plumber, gym" required />
+          </label>
+          <label class="field field-wide">
+            <span>Location</span>
+            <input id="scrape-location" name="location" type="text" value="Durban, South Africa" />
+          </label>
+          <label class="field field-wide">
+            <span>How many? (max 25)</span>
+            <input id="scrape-max" name="maxResults" type="number" min="1" max="25" value="10" />
+          </label>
+          <p class="board-hint hidden" id="scrape-status" role="status" aria-live="polite" style="margin-bottom:0"></p>
+        </div>
+        <div class="modal-foot">
+          <div class="spacer"></div>
+          <button type="button" class="btn-ghost" id="scrape-cancel">Cancel</button>
+          <button type="submit" class="btn-primary" id="scrape-run">Search Google Maps</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1295,9 +1329,10 @@
     );
     if (l.industry) chips.push(`<span class="lead-chip">${escapeHtml(l.industry)}</span>`);
     const title = l.name || l.business || 'Untitled lead';
-    const sub = (l.name && l.business) ? l.business : '';
+    // Scraped leads set name === business (Maps title); don't print it twice.
+    const sub = (l.name && l.business && l.name !== l.business) ? l.business : '';
     return `
-      <div class="lead-card" draggable="true" data-id="${l.id}" data-position="${l.position != null ? l.position : 0}">
+      <div class="lead-card" data-id="${l.id}" data-position="${l.position != null ? l.position : 0}">
         <div class="lead-name">${escapeHtml(title)}</div>
         ${sub ? `<div class="lead-sub">${escapeHtml(sub)}</div>` : ''}
         ${chips.length ? `<div class="lead-meta">${chips.join('')}</div>` : ''}
@@ -1305,7 +1340,7 @@
       </div>`;
   }
 
-  // ── Drag & drop (native HTML5, event-delegated so re-renders keep working) ──
+  // ── Drag & drop helpers (used by the pointer-based drag below) ──
   function getDragAfterElement(container, y) {
     const cards = [...container.querySelectorAll('.lead-card:not(.dragging)')];
     return cards.reduce((closest, child) => {
@@ -1329,51 +1364,111 @@
     return (prevPos + nextPos) / 2;
   }
 
-  crmEls.board.addEventListener('dragstart', (e) => {
+  // ── Pointer-based drag (mouse + touch) ──────────────────────────────
+  // Replaces native HTML5 DnD, which silently failed on link-bearing cards,
+  // couldn't auto-scroll the horizontally-overflowing board, and never fires on
+  // touchscreens. Pointer events give one code path for mouse and touch with full
+  // control: the dragged card is reparented to follow the pointer, the board
+  // auto-scrolls near its edges, and the move persists on release.
+  const drag = { id: null, el: null, pointerId: null, startX: 0, startY: 0, active: false };
+  let suppressClick = false;
+  let moveHandler = null, upHandler = null;
+
+  // Auto-scroll the overflowing board while the pointer sits near an edge, on a
+  // rAF loop so it keeps scrolling even when the pointer is held still.
+  let autoDir = 0, autoRAF = 0;
+  function autoTick() {
+    if (!autoDir) { autoRAF = 0; return; }
+    crmEls.board.scrollLeft += autoDir * 16;
+    autoRAF = requestAnimationFrame(autoTick);
+  }
+  function updateAutoscroll(x) {
+    const r = crmEls.board.getBoundingClientRect();
+    const edge = 72; // px hot-zone on each side
+    autoDir = x < r.left + edge ? -1 : x > r.right - edge ? 1 : 0;
+    if (autoDir && !autoRAF) autoRAF = requestAnimationFrame(autoTick);
+  }
+
+  crmEls.board.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // left button only
+    if (e.target.closest('.lead-chip-link')) return;         // let links click / navigate
     const card = e.target.closest('.lead-card');
     if (!card) return;
-    crm.dragId = card.dataset.id;
-    card.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    try { e.dataTransfer.setData('text/plain', card.dataset.id); } catch (_) {}
+    drag.id = card.dataset.id;
+    drag.el = card;
+    drag.pointerId = e.pointerId;
+    drag.startX = e.clientX;
+    drag.startY = e.clientY;
+    drag.active = false;
+    moveHandler = onPointerMove;
+    upHandler = onPointerUp;
+    document.addEventListener('pointermove', moveHandler);
+    document.addEventListener('pointerup', upHandler);
+    document.addEventListener('pointercancel', upHandler);
   });
 
-  crmEls.board.addEventListener('dragend', (e) => {
-    const card = e.target.closest('.lead-card');
-    if (card) card.classList.remove('dragging');
-    document.querySelectorAll('.col-body.drop-hint').forEach((c) => c.classList.remove('drop-hint'));
-    crm.dragId = null;
+  // A card press must never begin a text selection — otherwise dragging paints the
+  // board blue, and a press on the website link becomes a selection instead of a
+  // navigation. Block selection that starts inside a card; clicks and the link's
+  // own navigation are unaffected (selectstart ≠ click).
+  crmEls.board.addEventListener('selectstart', (e) => {
+    const el = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+    if (el && el.closest('.lead-card')) e.preventDefault();
   });
 
-  crmEls.board.addEventListener('dragover', (e) => {
-    const body = e.target.closest('.col-body');
-    if (!body) return;
+  function onPointerMove(e) {
+    if (e.pointerId !== drag.pointerId || !drag.el) return;
+    if (!drag.active) {
+      // Promote to a real drag only past a small threshold, so a tap still clicks.
+      if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
+      drag.active = true;
+      crm.dragId = drag.id;
+      drag.el.classList.add('dragging');
+      drag.el.style.pointerEvents = 'none'; // so elementFromPoint sees the column beneath
+      // The board's scroll-snap re-snaps scrollLeft to a column boundary after
+      // every programmatic nudge, which would stall the edge auto-scroll. Turn
+      // it off for the duration of the drag; restored on release.
+      crmEls.board.style.scrollSnapType = 'none';
+    }
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    updateAutoscroll(e.clientX);
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const body = under && under.closest('.col-body');
+    if (!body) return;
     document.querySelectorAll('.col-body.drop-hint').forEach((c) => { if (c !== body) c.classList.remove('drop-hint'); });
     body.classList.add('drop-hint');
-    const dragging = crmEls.board.querySelector('.lead-card.dragging');
-    if (!dragging) return;
     const after = getDragAfterElement(body, e.clientY);
-    if (after == null) body.appendChild(dragging);
-    else body.insertBefore(dragging, after);
-  });
+    if (after == null) body.appendChild(drag.el);
+    else body.insertBefore(drag.el, after);
+  }
 
-  crmEls.board.addEventListener('drop', (e) => {
-    const body = e.target.closest('.col-body');
-    if (!body) return;
-    e.preventDefault();
-    body.classList.remove('drop-hint');
-    const id = crm.dragId;
-    const lead = id && leadById(id);
-    if (!lead) return;
-    const prevStage = lead.stage, prevPos = lead.position;
-    lead.stage = body.dataset.stage;
-    lead.position = positionWithin(body, id);
-    renderBoard();
-    if (lead.stage === prevStage && lead.position === prevPos) return;
-    persistMove(lead, prevStage, prevPos);
-  });
+  function onPointerUp(e) {
+    if (e.pointerId !== drag.pointerId) return;
+    document.removeEventListener('pointermove', moveHandler);
+    document.removeEventListener('pointerup', upHandler);
+    document.removeEventListener('pointercancel', upHandler);
+    autoDir = 0;
+    crmEls.board.style.scrollSnapType = ''; // restore column snapping
+    const card = drag.el;
+    if (drag.active && card) {
+      card.classList.remove('dragging');
+      card.style.pointerEvents = '';
+      document.querySelectorAll('.col-body.drop-hint').forEach((c) => c.classList.remove('drop-hint'));
+      const lead = leadById(drag.id);
+      const body = card.closest('.col-body');
+      if (lead && body) {
+        const prevStage = lead.stage, prevPos = lead.position;
+        lead.stage = body.dataset.stage;
+        lead.position = positionWithin(body, drag.id);
+        renderBoard();
+        if (!(lead.stage === prevStage && lead.position === prevPos)) persistMove(lead, prevStage, prevPos);
+      }
+      // A click is synthesised after pointerup; keep it from opening the editor.
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 50);
+    }
+    drag.id = null; drag.el = null; drag.pointerId = null; drag.active = false;
+  }
 
   async function persistMove(lead, prevStage, prevPos) {
     try {
@@ -1393,17 +1488,18 @@
     }
   }
 
-  // Website chip is a real link: let it navigate, but keep the card's click
-  // (edit modal) and drag handlers from firing. Capture phase + stopPropagation
-  // intercepts before the delegated handlers on the board see the event.
-  ['click', 'mousedown', 'dragstart'].forEach((type) => {
-    crmEls.board.addEventListener(type, (e) => {
-      if (e.target.closest('.lead-chip-link')) e.stopPropagation();
-    }, true);
-  });
-
-  // Click a card → edit. (Native drag suppresses the click, so no conflict.)
+  // Website chip is a real link: let it navigate, but keep its click from
+  // reaching the board's edit handler. Capture phase + stopPropagation intercepts
+  // before the delegated click handler on the board sees the event. (pointerdown
+  // already ignores links, so this only governs the click-to-edit path.)
   crmEls.board.addEventListener('click', (e) => {
+    if (e.target.closest('.lead-chip-link')) e.stopPropagation();
+  }, true);
+
+  // Click a card → edit. Skipped right after a drag (pointerup synthesises a
+  // click we don't want opening the editor).
+  crmEls.board.addEventListener('click', (e) => {
+    if (suppressClick) return;
     const card = e.target.closest('.lead-card');
     if (!card) return;
     const lead = leadById(card.dataset.id);
@@ -1688,6 +1784,101 @@
   importEls.modal.addEventListener('click', (e) => { if (e.target === importEls.modal) closeImportModal(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !importEls.modal.classList.contains('hidden')) closeImportModal();
+  });
+
+  // ══ Find leads (Google Maps via Apify) ════════════════════════════
+  // Keyword + location → POST /api/scrape-leads, which scrapes, dedupes and
+  // inserts new "new"-stage leads. The server clamps the count and holds the
+  // Apify token; this only shows progress and merges the survivors in.
+  const scrapeEls = {
+    modal:    document.getElementById('scrape-modal'),
+    form:     document.getElementById('scrape-form'),
+    keyword:  document.getElementById('scrape-keyword'),
+    location: document.getElementById('scrape-location'),
+    max:      document.getElementById('scrape-max'),
+    status:   document.getElementById('scrape-status'),
+    runBtn:   document.getElementById('scrape-run'),
+  };
+
+  function openScrapeModal() {
+    scrapeEls.form.reset();
+    scrapeEls.location.value = 'Durban, South Africa';
+    scrapeEls.max.value = '10';
+    scrapeEls.status.classList.add('hidden');
+    scrapeEls.status.textContent = '';
+    scrapeEls.runBtn.disabled = false;
+    scrapeEls.modal.classList.remove('hidden');
+    setTimeout(() => scrapeEls.keyword.focus(), 30);
+  }
+  function closeScrapeModal() { scrapeEls.modal.classList.add('hidden'); }
+
+  function scrapeStatus(msg) {
+    scrapeEls.status.textContent = msg;
+    scrapeEls.status.classList.remove('hidden');
+  }
+
+  scrapeEls.form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const keyword = scrapeEls.keyword.value.trim();
+    if (!keyword) { toast('Enter what you want to search for', 'err'); return; }
+
+    // Disable immediately — this call spends Apify credits; no double-submit.
+    scrapeEls.runBtn.disabled = true;
+    scrapeStatus('Searching Google Maps… 30–90 seconds');
+
+    let res;
+    try {
+      res = await apiFetch('/api/scrape-leads', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          keyword,
+          location: scrapeEls.location.value.trim(),
+          maxResults: Number(scrapeEls.max.value) || 10,
+        }),
+      });
+    } catch (_) {
+      scrapeStatus('Cannot reach the server. Is `vercel dev` running?');
+      scrapeEls.runBtn.disabled = false;
+      return;
+    }
+
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      scrapeStatus('API not found — run `vercel dev`, not a static server (e.g. Live Server).');
+      scrapeEls.runBtn.disabled = false;
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const msg =
+        data.code === 'no_token' ? "Lead search isn't set up yet (missing Apify token)." :
+        data.code === 'timeout'  ? 'Search timed out — try a narrower search or fewer results.' :
+        (data.error || 'Search failed. Please try again.');
+      scrapeStatus(msg);
+      scrapeEls.runBtn.disabled = false;
+      return;
+    }
+
+    if (!data.scraped) {
+      scrapeStatus('No businesses found. Try different words or another location.');
+      scrapeEls.runBtn.disabled = false;
+      return;
+    }
+
+    (data.leads || []).forEach((l) => crm.leads.push(l));
+    renderBoard();
+    closeScrapeModal();
+    toast(`${data.added} added, ${data.skipped} duplicate${data.skipped === 1 ? '' : 's'} skipped`, 'ok');
+  });
+
+  document.getElementById('find-leads-btn').addEventListener('click', openScrapeModal);
+  document.getElementById('scrape-close').addEventListener('click', closeScrapeModal);
+  document.getElementById('scrape-cancel').addEventListener('click', closeScrapeModal);
+  scrapeEls.modal.addEventListener('click', (e) => { if (e.target === scrapeEls.modal) closeScrapeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !scrapeEls.modal.classList.contains('hidden')) closeScrapeModal();
   });
 
   renderBoard(); // empty columns until the Leads tab loads data

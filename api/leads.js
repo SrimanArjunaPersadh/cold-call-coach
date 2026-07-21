@@ -25,6 +25,8 @@ const LEAD_FIELDS = [
   "industry",
   "notes",
   "stage",
+  "address",
+  "maps_rating",
 ];
 
 function json(res, status, body) {
