@@ -468,6 +468,7 @@
     }
     .toast.err { border-color: color-mix(in srgb, var(--err) 55%, transparent); }
     .toast.ok  { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+    .secret-error { color: var(--err); font-size: 12px; min-height: 1em; margin: 8px 0 0; }
 
     /* ── CSV import ─────────────────────────────── */
     .import-drop {
@@ -670,6 +671,29 @@
           <button type="button" class="btn-primary" id="import-run" disabled>Import leads</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Unlock (shared-secret passphrase) -->
+  <div class="modal-overlay hidden" id="secret-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="secret-title">
+      <div class="modal-head">
+        <h3 id="secret-title">Unlock</h3>
+      </div>
+      <form id="secret-form">
+        <div class="modal-body">
+          <p class="board-hint" style="margin-top:0">This tool is passphrase-protected. Enter it to continue.</p>
+          <label class="field field-wide">
+            <span>Passphrase</span>
+            <input type="password" id="secret-input" autocomplete="current-password" />
+          </label>
+          <p class="secret-error" id="secret-error" role="alert"></p>
+        </div>
+        <div class="modal-foot">
+          <div class="spacer"></div>
+          <button type="submit" class="btn-primary">Unlock</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1020,6 +1044,66 @@
       .replaceAll("'", '&#039;');
   }
 
+  // ══ Shared-secret lock ═════════════════════════════════════════════
+  // Personal single-user lock for the public Vercel URL. The passphrase lives
+  // in sessionStorage only (gone when the tab closes — never localStorage) and
+  // rides along as the x-app-secret header on every call to our own /api
+  // routes. Requests to Supabase's signed upload URL do NOT get it.
+  const SECRET_KEY = 'ccc_app_secret';
+  const secretEls = {
+    modal: document.getElementById('secret-modal'),
+    form:  document.getElementById('secret-form'),
+    input: document.getElementById('secret-input'),
+    error: document.getElementById('secret-error'),
+  };
+  const getSecret   = () => sessionStorage.getItem(SECRET_KEY) || '';
+  const setSecret   = (v) => sessionStorage.setItem(SECRET_KEY, v);
+  const clearSecret = () => sessionStorage.removeItem(SECRET_KEY);
+
+  let secretResolver = null;
+  function promptForSecret(message) {
+    secretEls.error.textContent = message || '';
+    secretEls.input.value = '';
+    secretEls.modal.classList.remove('hidden');
+    setTimeout(() => secretEls.input.focus(), 0);
+    return new Promise((resolve) => { secretResolver = resolve; });
+  }
+  secretEls.form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const val = secretEls.input.value.trim();
+    if (!val) return; // don't accept an empty passphrase
+    secretEls.modal.classList.add('hidden');
+    secretEls.input.value = '';
+    const resolve = secretResolver; secretResolver = null;
+    if (resolve) resolve(val);
+  });
+
+  // Current secret, prompting once (and storing it) if we don't have one yet.
+  async function ensureSecret(message) {
+    const existing = getSecret();
+    if (existing && !message) return existing;
+    const entered = await promptForSecret(message);
+    if (entered) setSecret(entered);
+    return entered;
+  }
+
+  // Call one of our own API routes with the secret header attached. On 401
+  // (typo'd or rotated passphrase) clear it, re-prompt, and retry once.
+  async function apiFetch(path, options = {}) {
+    let secret = await ensureSecret();
+    const withSecret = (sec) => fetch(path, {
+      ...options,
+      headers: { ...(options.headers || {}), 'x-app-secret': sec },
+    });
+    let res = await withSecret(secret);
+    if (res.status === 401) {
+      clearSecret();
+      secret = await ensureSecret('That passphrase was rejected. Try again.');
+      if (secret) res = await withSecret(secret);
+    }
+    return res;
+  }
+
   async function analyzeRecording() {
     if (!recording) return;
     els.analyze.disabled = true;
@@ -1027,7 +1111,7 @@
     els.hint.textContent = 'Saving the recording before transcription.';
 
     try {
-      const createRes = await fetch('/api/create-upload', {
+      const createRes = await apiFetch('/api/create-upload', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -1056,7 +1140,7 @@
       setUploadStatus('ok', `Saved recording ${createJson.call_id}. Transcribing & scoring… (10–60s)`);
       els.hint.textContent = 'Recording saved. Deepgram is transcribing, then Claude scores the rubric.';
 
-      const analyzeRes = await fetch('/api/analyze', {
+      const analyzeRes = await apiFetch('/api/analyze', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ call_id: createJson.call_id }),
@@ -1156,7 +1240,7 @@
   async function leadsApi(path, options, fallbackMsg) {
     let res;
     try {
-      res = await fetch(path, options);
+      res = await apiFetch(path, options);
     } catch (_) {
       throw new Error('Cannot reach the server. Is `vercel dev` running?');
     }
