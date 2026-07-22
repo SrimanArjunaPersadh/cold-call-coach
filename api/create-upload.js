@@ -34,6 +34,8 @@ module.exports = async function handler(req, res) {
       ? Number(payload.duration_seconds)
       : null;
     const offerContext = typeof payload.offer_context === "string" ? payload.offer_context : "";
+    // Optional CRM link — the lead the rep pressed "Call" on. Absent/blank → null.
+    const leadId = typeof payload.lead_id === "string" && payload.lead_id ? payload.lead_id : null;
 
     const inserted = await supabaseFetch("/rest/v1/calls?select=id,audio_path", {
       method: "POST",
@@ -46,6 +48,7 @@ module.exports = async function handler(req, res) {
         audio_path: `pending/${userId}`,
         duration_seconds: durationSeconds,
         offer_context: offerContext,
+        lead_id: leadId,
         stt_provider: "deepgram",
         status: "recorded",
       }),

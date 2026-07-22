@@ -414,6 +414,8 @@
     }
     .lead-chip-link { color: var(--accent); text-decoration: none; cursor: pointer; }
     .lead-chip-link:hover { text-decoration: underline; }
+    /* "No website" flag: same chip, accent-tinted so it stands out at a glance. */
+    .lead-chip-flag { color: var(--accent); border-color: var(--accent); }
     .lead-note-flag { font-size: 11px; color: var(--accent); margin-top: 8px; }
 
     /* ── Add / edit modal ─────────────────────────────── */
@@ -501,6 +503,96 @@
     .import-preview { font-size: 13px; color: var(--text-lo); }
     .import-preview strong { color: var(--text-hi); font-size: 15px; }
 
+    /* ── Call ↔ lead linking ─────────────────────────────── */
+    /* "Call" action on a lead card — accent chip-button, reuses card tokens. */
+    button.lead-call-btn {
+      appearance: none; cursor: pointer; font-family: inherit;
+      font-size: 11px; font-weight: 600; color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: 6px; padding: 2px 9px;
+      display: inline-flex; align-items: center; gap: 4px;
+      transition: background .15s;
+    }
+    button.lead-call-btn:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+    /* "Calling: {business}" chip above the Coach record controls. */
+    .calling-chip {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-top: 16px; padding: 10px 14px;
+      background: var(--accent-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      border-radius: var(--radius); font-size: 14px;
+    }
+    .calling-chip .calling-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+    .calling-chip .calling-name { font-weight: 600; color: var(--text-hi); }
+    .calling-chip .calling-x {
+      appearance: none; border: none; background: transparent; color: var(--text-lo);
+      font-size: 20px; line-height: 1; cursor: pointer; margin-left: auto;
+      width: 32px; height: 32px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .calling-chip .calling-x:hover { color: var(--text-hi); background: var(--bg-3); }
+
+    /* Fallback "Attach to lead" control on the result view. */
+    .attach-row { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .attach-label { font-size: 12px; font-weight: 600; color: var(--text-lo); }
+    .attach-status { font-size: 12px; color: var(--text-mid); min-height: 1em; }
+    .attach-status.ok  { color: var(--ok); }
+    .attach-status.err { color: var(--err); }
+
+    /* Searchable dropdown (combobox) — field tokens + a floating menu. */
+    .combo { position: relative; }
+    .combo-input {
+      font-family: var(--sans); font-size: 14px; color: var(--text-hi);
+      background: var(--bg-2); border: 1px solid var(--border-strong);
+      border-radius: 8px; min-height: 40px; padding: 9px 11px; width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .combo-input::placeholder { color: var(--text-lo); }
+    .combo-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .combo-menu {
+      position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+      background: var(--bg-2); border: 1px solid var(--border-strong);
+      border-radius: 8px; box-shadow: var(--shadow-lg);
+      max-height: 240px; overflow-y: auto; padding: 4px;
+    }
+    .combo-option {
+      padding: 8px 10px; border-radius: 6px; font-size: 13px; color: var(--text-mid);
+      cursor: pointer; display: flex; align-items: baseline; gap: 8px;
+    }
+    .combo-option:hover, .combo-option.active { background: var(--bg-3); color: var(--text-hi); }
+    .combo-sub { color: var(--text-lo); font-size: 12px; font-family: var(--mono); }
+    .combo-empty { padding: 8px 10px; font-size: 13px; color: var(--text-lo); }
+
+    /* Lead card "Calls" section in the edit modal — collapsible per call. */
+    .calls-section { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .calls-head {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em;
+      color: var(--text-lo); margin-bottom: 12px;
+    }
+    .call-item {
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 8px;
+    }
+    .call-item summary {
+      list-style: none; cursor: pointer; padding: 10px 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .call-item summary::-webkit-details-marker { display: none; }
+    .call-item summary::marker { content: ''; }
+    .call-date { font-size: 12px; color: var(--text-mid); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+    .call-topfix {
+      flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--text-lo);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .call-detail { padding: 4px 12px 12px; }
+    .call-detail .score-summary { margin-top: 4px; }
+    .call-transcript { margin-top: 4px; }
+
     /* ── Responsive (mobile-first checks at 380px) ── */
     @media (max-width: 560px) {
       .form-grid { grid-template-columns: 1fr; }
@@ -549,6 +641,13 @@
         </div>
       </div>
 
+      <!-- Lead attached from a card's "Call" button; X detaches (§ link-calls) -->
+      <div class="calling-chip hidden" id="calling-chip">
+        <span class="calling-label">Calling</span>
+        <span class="calling-name" id="calling-name"></span>
+        <button type="button" class="calling-x" id="calling-detach" aria-label="Detach lead">&times;</button>
+      </div>
+
       <div class="record-row">
         <button class="record" id="record-btn" disabled>
           <span class="dot"></span> <span class="label" id="record-label">Record</span>
@@ -570,6 +669,17 @@
         <audio id="playback" controls></audio>
         <button class="analyze" id="analyze-btn" disabled>Analyze</button>
         <div class="upload-status hidden" id="upload-status" role="status" aria-live="polite"></div>
+
+        <!-- Fallback: link a finished call to a lead after the fact -->
+        <div class="attach-row hidden" id="attach-row">
+          <span class="attach-label" id="attach-label">Link this call to a lead</span>
+          <div class="combo" id="attach-combo">
+            <input type="text" class="combo-input" id="attach-input" placeholder="Search leads by business or phone…"
+                   autocomplete="off" role="combobox" aria-expanded="false" aria-controls="attach-menu" aria-autocomplete="list" />
+            <div class="combo-menu hidden" id="attach-menu" role="listbox" aria-label="Leads"></div>
+          </div>
+          <span class="attach-status" id="attach-status" role="status" aria-live="polite"></span>
+        </div>
       </div>
 
       <label class="nudge">
@@ -622,6 +732,13 @@
           <span>Notes</span>
           <textarea name="notes" rows="4" placeholder="Call notes, context, next steps…"></textarea>
         </label>
+
+        <!-- Calls linked to this lead (edit mode only) -->
+        <div class="calls-section hidden" id="lead-calls">
+          <div class="calls-head">Calls</div>
+          <div id="lead-calls-body"></div>
+        </div>
+
         <div class="modal-foot">
           <button type="button" class="btn-danger hidden" id="lead-delete">Delete</button>
           <div class="spacer"></div>
@@ -696,6 +813,10 @@
           <label class="field field-wide">
             <span>How many? (max 25)</span>
             <input id="scrape-max" name="maxResults" type="number" min="1" max="25" value="10" />
+          </label>
+          <label class="field field-wide">
+            <span>Min reviews</span>
+            <input id="scrape-min-reviews" name="minReviews" type="number" min="0" value="5" />
           </label>
           <p class="board-hint hidden" id="scrape-status" role="status" aria-live="polite" style="margin-bottom:0"></p>
         </div>
@@ -897,6 +1018,7 @@
     render('checking');                       // disables the button during the await
     els.hint.textContent = '';
     els.analyze.disabled = true;
+    resetAttach();                            // last call's attach UI is stale now
     if (recording && els.playback.src) URL.revokeObjectURL(els.playback.src);
 
     let stream;
@@ -1011,13 +1133,13 @@
     els.uploadStatus.classList.toggle('hidden', !text);
   }
 
-  function renderTranscript(turns) {
+  // Pure HTML builder — shared by the Coach transcript panel and the lead
+  // card's Calls section (§ link-calls). Returns a placeholder when empty.
+  function transcriptHtml(turns) {
     if (!turns || !turns.length) {
-      els.transcriptBody.innerHTML = '<p class="placeholder">No transcript returned.</p>';
-      return;
+      return '<p class="placeholder">No transcript returned.</p>';
     }
-
-    els.transcriptBody.innerHTML = turns.map((turn) => `
+    return turns.map((turn) => `
       <div class="turn" data-speaker="${turn.speaker}">
         <div class="turn-head">
           <span class="speaker">Speaker ${turn.speaker}</span>
@@ -1027,6 +1149,7 @@
       </div>
     `).join('');
   }
+  function renderTranscript(turns) { els.transcriptBody.innerHTML = transcriptHtml(turns); }
 
   // Human labels for the six fixed Hormozi dimensions (PHASE1-DESIGN §5a).
   const DIMENSION_LABELS = {
@@ -1038,10 +1161,11 @@
     permission_and_framing:   'Permission & framing',
   };
 
-  function renderScores(scores) {
+  // Pure HTML builder — shared by the Coach scores panel and the lead card's
+  // Calls section (§ link-calls). Returns a placeholder when empty.
+  function scoresHtml(scores) {
     if (!scores || !Array.isArray(scores.dimensions)) {
-      els.scoresBody.innerHTML = '<p class="placeholder">No scores returned.</p>';
-      return;
+      return '<p class="placeholder">No scores returned.</p>';
     }
 
     const cards = scores.dimensions.map((d) => `
@@ -1055,7 +1179,7 @@
       </div>
     `).join('');
 
-    els.scoresBody.innerHTML = `
+    return `
       <div class="score-summary">
         <div class="overall-tile">
           <span class="overall-num" data-score="${Math.round(scores.overall_score)}">${scores.overall_score}</span>
@@ -1068,6 +1192,7 @@
       </div>
       ${cards}`;
   }
+  function renderScores(scores) { els.scoresBody.innerHTML = scoresHtml(scores); }
 
   function escapeHtml(value) {
     return String(value)
@@ -1076,6 +1201,204 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
+  }
+
+  // ══ Call ↔ lead linking (§ link-calls) ═════════════════════════════
+  // Primary flow: "Call" on a lead card attaches the lead, jumps to Coach, and
+  // the recording's create-upload saves lead_id. Fallback: after analysis, an
+  // "Attach to lead" combobox links the finished call. Lead card → Calls list.
+
+  let attachedLead = null;   // { id, business } the next recording will link to
+  let lastCallId = null;     // id of the just-analysed call (for attach-after)
+
+  const callingEls = {
+    chip:   document.getElementById('calling-chip'),
+    name:   document.getElementById('calling-name'),
+    detach: document.getElementById('calling-detach'),
+  };
+  const attachEls = {
+    row:    document.getElementById('attach-row'),
+    input:  document.getElementById('attach-input'),
+    menu:   document.getElementById('attach-menu'),
+    status: document.getElementById('attach-status'),
+  };
+  const leadCallsEls = {
+    section: document.getElementById('lead-calls'),
+    body:    document.getElementById('lead-calls-body'),
+  };
+
+  const leadTitle = (l) => l.business || l.name || 'Untitled lead';
+
+  function renderCallingChip() {
+    if (attachedLead) {
+      callingEls.name.textContent = attachedLead.business;
+      callingEls.chip.classList.remove('hidden');
+    } else {
+      callingEls.chip.classList.add('hidden');
+    }
+  }
+
+  // Card "Call" → attach + switch to Coach.
+  function startCallForLead(lead) {
+    attachedLead = { id: lead.id, business: leadTitle(lead) };
+    renderCallingChip();
+    switchView('coach');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  callingEls.detach.addEventListener('click', () => { attachedLead = null; renderCallingChip(); });
+
+  // Hide + reset the attach control (new recording started, or nothing to link).
+  function resetAttach() {
+    lastCallId = null;
+    attachEls.row.classList.add('hidden');
+    attachEls.status.textContent = '';
+    attachEls.status.className = 'attach-status';
+    if (attachCombo) attachCombo.reset();
+  }
+
+  // ── Searchable dropdown (combobox) ──────────────────────────────────
+  // Built to the app's dropdown conventions: option selection via onmousedown +
+  // preventDefault (so the input doesn't blur first), click-outside to close,
+  // Enter to pick the active row, Escape to close, arrows to move.
+  function setupLeadCombo({ input, menu, onSelect }) {
+    let items = [];        // leads currently listed
+    let activeIdx = -1;
+    let open = false;
+
+    function filtered() {
+      const q = input.value.trim().toLowerCase();
+      const all = crm.leads.slice();
+      if (!q) return all.slice(0, 50);
+      return all
+        .filter((l) => [l.business, l.name, l.phone].some((v) => v && String(v).toLowerCase().includes(q)))
+        .slice(0, 50);
+    }
+
+    function render() {
+      items = filtered();
+      if (!items.length) {
+        menu.innerHTML = '<div class="combo-empty">No leads match.</div>';
+        return;
+      }
+      menu.innerHTML = items.map((l, i) => `
+        <div class="combo-option${i === activeIdx ? ' active' : ''}" role="option" data-idx="${i}" aria-selected="${i === activeIdx}">
+          <span>${escapeHtml(leadTitle(l))}</span>
+          ${l.phone ? `<span class="combo-sub">${escapeHtml(l.phone)}</span>` : ''}
+        </div>`).join('');
+    }
+
+    function openMenu() {
+      if (open) return;
+      open = true; activeIdx = -1;
+      render();
+      menu.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+      document.addEventListener('mousedown', onDocDown);
+    }
+    function closeMenu() {
+      if (!open) return;
+      open = false; activeIdx = -1;
+      menu.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('mousedown', onDocDown);
+    }
+    function onDocDown(e) { if (!input.parentElement.contains(e.target)) closeMenu(); }
+    function choose(i) {
+      const lead = items[i];
+      if (!lead) return;
+      closeMenu();
+      onSelect(lead);
+    }
+
+    input.addEventListener('focus', openMenu);
+    input.addEventListener('input', () => { activeIdx = -1; if (open) render(); else openMenu(); });
+    // onmousedown + preventDefault → the click lands before the input blurs.
+    menu.addEventListener('mousedown', (e) => {
+      const opt = e.target.closest('.combo-option');
+      if (!opt) return;
+      e.preventDefault();
+      choose(Number(opt.dataset.idx));
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) { openMenu(); return; } activeIdx = Math.min(activeIdx + 1, items.length - 1); render(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
+      else if (e.key === 'Enter') { if (open && activeIdx >= 0) { e.preventDefault(); choose(activeIdx); } }
+      else if (e.key === 'Escape') { if (open) { e.preventDefault(); e.stopPropagation(); closeMenu(); } }
+    });
+
+    return { reset: () => { input.value = ''; closeMenu(); } };
+  }
+
+  let attachCombo = null;
+
+  async function revealAttach() {
+    // The combobox reads crm.leads — load them if the Leads tab was never opened.
+    if (!crm.loaded) { try { await loadLeads(); } catch (_) { /* combo shows "No leads match." */ } }
+    attachEls.row.classList.remove('hidden');
+    if (!attachCombo) {
+      attachCombo = setupLeadCombo({ input: attachEls.input, menu: attachEls.menu, onSelect: attachCallToLead });
+    }
+  }
+
+  async function attachCallToLead(lead) {
+    if (!lastCallId) return;
+    attachEls.status.textContent = 'Linking…';
+    attachEls.status.className = 'attach-status';
+    try {
+      await leadsApi(
+        `/api/calls?id=${encodeURIComponent(lastCallId)}`,
+        { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lead_id: lead.id }) },
+        'Could not link call'
+      );
+      attachEls.input.value = leadTitle(lead);
+      attachEls.status.textContent = `Linked to ${leadTitle(lead)}.`;
+      attachEls.status.className = 'attach-status ok';
+    } catch (err) {
+      attachEls.status.textContent = err.message || 'Could not link call';
+      attachEls.status.className = 'attach-status err';
+    }
+  }
+
+  // ── Lead card "Calls" section ───────────────────────────────────────
+  async function loadLeadCalls(leadId) {
+    leadCallsEls.body.innerHTML = '<p class="placeholder">Loading calls…</p>';
+    try {
+      const data = await leadsApi(`/api/calls?lead_id=${encodeURIComponent(leadId)}`, undefined, 'Could not load calls');
+      if (crm.editingId !== leadId) return; // modal moved to another lead mid-fetch
+      renderLeadCalls(data.calls || []);
+    } catch (err) {
+      if (crm.editingId !== leadId) return;
+      leadCallsEls.body.innerHTML = `<p class="placeholder">${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  function renderLeadCalls(calls) {
+    if (!calls.length) {
+      leadCallsEls.body.innerHTML = '<p class="placeholder">No calls yet.</p>';
+      return;
+    }
+    leadCallsEls.body.innerHTML = calls.map((c) => {
+      const scores = c.rubric_scores || null;
+      const date = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+      const scored = scores && scores.overall_score != null;
+      const overall = scored ? scores.overall_score : '—';
+      const topFix = scores && scores.top_fix
+        ? scores.top_fix
+        : (c.status && c.status !== 'scored' ? `Not scored (${c.status})` : 'No score');
+      return `
+        <details class="call-item">
+          <summary>
+            <span class="score-badge" data-score="${scored ? Math.round(scores.overall_score) : 0}">${overall}<em>/5</em></span>
+            <span class="call-date">${escapeHtml(date)}</span>
+            <span class="call-topfix">${escapeHtml(topFix)}</span>
+          </summary>
+          <div class="call-detail">
+            ${scoresHtml(scores)}
+            <div class="call-transcript">${transcriptHtml(c.transcript)}</div>
+          </div>
+        </details>`;
+    }).join('');
   }
 
   // ══ Shared-secret lock ═════════════════════════════════════════════
@@ -1152,6 +1475,7 @@
           duration_seconds: recording.seconds,
           mime_type: recording.mime,
           offer_context: localStorage.getItem('offer_context_default') || '',
+          lead_id: attachedLead ? attachedLead.id : null,
         }),
       });
       const createJson = await createRes.json().catch(() => ({}));
@@ -1186,6 +1510,16 @@
       renderScores(analyzeJson.rubric_scores);
       setUploadStatus('ok', `Transcript and coaching scores ready for recording ${createJson.call_id}.`);
       els.hint.textContent = 'Transcript and coaching scores ready.';
+
+      // Offer the after-the-fact "Attach to lead" control. If a lead was already
+      // attached from a card, create-upload saved lead_id — reflect that here.
+      lastCallId = createJson.call_id;
+      await revealAttach();
+      if (attachedLead) {
+        attachEls.input.value = attachedLead.business;
+        attachEls.status.textContent = `Linked to ${attachedLead.business}.`;
+        attachEls.status.className = 'attach-status ok';
+      }
     } catch (err) {
       setUploadStatus('err', err.message || 'Upload failed.');
       els.hint.textContent = 'Upload failed. Your local recording is still here; you can retry Analyze.';
@@ -1247,15 +1581,18 @@
     </label>`).join('');
   crmEls.stage.innerHTML = STAGES.map((s) => `<option value="${s.key}">${s.label}</option>`).join('');
 
-  // View tabs (Coach ↔ Leads).
-  document.getElementById('tabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.tab');
-    if (!btn) return;
-    const view = btn.dataset.view;
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === btn));
+  // View tabs (Coach ↔ Leads). Also called programmatically by the card "Call"
+  // button, which jumps to Coach with a lead attached.
+  function switchView(view) {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
     document.getElementById('coach-view').classList.toggle('hidden', view !== 'coach');
     document.getElementById('leads-view').classList.toggle('hidden', view !== 'leads');
     if (view === 'leads' && !crm.loaded) loadLeads();
+  }
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab');
+    if (!btn) return;
+    switchView(btn.dataset.view);
   });
 
   let toastTimer = 0;
@@ -1327,7 +1664,19 @@
     if (l.website) chips.push(
       `<a class="lead-chip lead-chip-link" href="${escapeHtml(normalizeHref(l.website))}" target="_blank" rel="noopener noreferrer" draggable="false">${escapeHtml(cleanUrl(l.website))}</a>`
     );
+    // No website = a high-value prospect; flag it at a glance. Reuses the chip
+    // styling and the existing --accent token (no new colours).
+    else chips.push(`<span class="lead-chip lead-chip-flag">No website</span>`);
+    // Google Maps link — href is already absolute (actor's `url`), so no
+    // normalisation. Shares .lead-chip-link so the board's drag/click handlers
+    // treat it as a link (stopPropagation, drag-exempt) for free.
+    if (l.maps_url) chips.push(
+      `<a class="lead-chip lead-chip-link" href="${escapeHtml(l.maps_url)}" target="_blank" rel="noopener noreferrer" draggable="false">Maps</a>`
+    );
     if (l.industry) chips.push(`<span class="lead-chip">${escapeHtml(l.industry)}</span>`);
+    // "Call" action — attaches this lead to the Coach recorder. Lives in the meta
+    // row so it wraps with the chips; the drag + click handlers exempt it below.
+    chips.push(`<button type="button" class="lead-call-btn">📞 Call</button>`);
     const title = l.name || l.business || 'Untitled lead';
     // Scraped leads set name === business (Maps title); don't print it twice.
     const sub = (l.name && l.business && l.name !== l.business) ? l.business : '';
@@ -1392,6 +1741,7 @@
   crmEls.board.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return; // left button only
     if (e.target.closest('.lead-chip-link')) return;         // let links click / navigate
+    if (e.target.closest('.lead-call-btn')) return;          // Call button: click, don't drag
     const card = e.target.closest('.lead-card');
     if (!card) return;
     drag.id = card.dataset.id;
@@ -1503,7 +1853,10 @@
     const card = e.target.closest('.lead-card');
     if (!card) return;
     const lead = leadById(card.dataset.id);
-    if (lead) openLeadModal(lead);
+    if (!lead) return;
+    // "Call" button attaches the lead + jumps to Coach; anything else edits.
+    if (e.target.closest('.lead-call-btn')) startCallForLead(lead);
+    else openLeadModal(lead);
   });
 
   // ── Add / edit modal ──
@@ -1515,6 +1868,14 @@
     LEAD_FORM_FIELDS.forEach((f) => { el[f.key].value = lead && lead[f.key] != null ? lead[f.key] : ''; });
     el.notes.value = lead && lead.notes ? lead.notes : '';
     crmEls.stage.value = lead ? (lead.stage || 'new') : 'new';
+    // Calls section: only in edit mode, populated from GET /api/calls?lead_id=…
+    if (lead) {
+      leadCallsEls.section.classList.remove('hidden');
+      loadLeadCalls(lead.id);
+    } else {
+      leadCallsEls.section.classList.add('hidden');
+      leadCallsEls.body.innerHTML = '';
+    }
     crmEls.modal.classList.remove('hidden');
     setTimeout(() => el.name.focus(), 30);
   }
@@ -1796,6 +2157,7 @@
     keyword:  document.getElementById('scrape-keyword'),
     location: document.getElementById('scrape-location'),
     max:      document.getElementById('scrape-max'),
+    minReviews: document.getElementById('scrape-min-reviews'),
     status:   document.getElementById('scrape-status'),
     runBtn:   document.getElementById('scrape-run'),
   };
@@ -1804,6 +2166,7 @@
     scrapeEls.form.reset();
     scrapeEls.location.value = 'Durban, South Africa';
     scrapeEls.max.value = '10';
+    scrapeEls.minReviews.value = '5';
     scrapeEls.status.classList.add('hidden');
     scrapeEls.status.textContent = '';
     scrapeEls.runBtn.disabled = false;
@@ -1835,6 +2198,8 @@
           keyword,
           location: scrapeEls.location.value.trim(),
           maxResults: Number(scrapeEls.max.value) || 10,
+          // Blank field → let the server apply its default (5).
+          minReviews: scrapeEls.minReviews.value.trim() === '' ? 5 : Number(scrapeEls.minReviews.value),
         }),
       });
     } catch (_) {
@@ -1870,7 +2235,12 @@
     (data.leads || []).forEach((l) => crm.leads.push(l));
     renderBoard();
     closeScrapeModal();
-    toast(`${data.added} added, ${data.skipped} duplicate${data.skipped === 1 ? '' : 's'} skipped`, 'ok');
+    const belowMin = data.belowMin || 0;
+    toast(
+      `${data.added} added, ${data.skipped} duplicate${data.skipped === 1 ? '' : 's'} skipped` +
+      (belowMin ? `, ${belowMin} below review minimum` : ''),
+      'ok'
+    );
   });
 
   document.getElementById('find-leads-btn').addEventListener('click', openScrapeModal);

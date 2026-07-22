@@ -27,9 +27,13 @@ create table calls (
   stt_provider text,
   analysis_model text,
   status text not null default 'recorded',
-  error_message text
+  error_message text,
+  lead_id uuid
 );
 ```
+
+> `lead_id` is the CRM link. Its foreign key to `leads(id)` is added **after** the
+> leads table exists — see "Link calls to leads" below.
 
 ## Leads table (CRM)
 
@@ -65,6 +69,22 @@ name-less leads can be saved (the removed columns can stay — they're just unus
 ```sql
 alter table leads alter column name drop not null;
 ```
+
+## Link calls to leads
+
+Once **both** tables exist, wire `calls.lead_id` to the leads table. A call keeps
+its transcript + scores even if its lead is later deleted (`on delete set null`):
+
+```sql
+alter table calls
+  add constraint calls_lead_id_fkey
+  foreign key (lead_id) references leads(id) on delete set null;
+
+create index calls_lead_id_idx on calls (lead_id);
+```
+
+Clicking **Call** on a lead card attaches that lead to the next recording; the
+lead card's **Calls** section lists every call linked to it.
 
 ## Environment
 
