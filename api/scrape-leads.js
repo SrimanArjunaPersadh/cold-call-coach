@@ -84,6 +84,11 @@ module.exports = async function handler(req, res) {
         : DEFAULT_LOCATION;
     // Server-side clamp regardless of what the client sends.
     const maxResults = Math.min(Math.max(1, Number(payload.maxResults) || 10), 25);
+    // Minimum review count. Defaults to 5 when missing/invalid; 0 disables the
+    // filter. The actor has no reliable native reviews-count input (only
+    // placeMinimumStars / skipClosedPlaces), so we filter in the mapper below.
+    const rawMin = Number(payload.minReviews);
+    const minReviews = Number.isFinite(rawMin) && rawMin >= 0 ? Math.floor(rawMin) : 5;
 
     let apifyRes;
     try {
@@ -125,16 +130,26 @@ module.exports = async function handler(req, res) {
 
     // Map to our columns. business ← title. NO email is read or stored (POPIA).
     // maps_rating is coerced to a real number or null here — never a raw value.
+    // maps_url ← the actor's `url` (absolute Google Maps link). A missing website
+    // is NOT a drop reason — no-website businesses are wanted (badge on the card).
     const candidates = [];
+    let belowMin = 0;
     for (const it of Array.isArray(items) ? items : []) {
       const business = it && typeof it.title === "string" ? it.title.trim() : "";
       if (!business) continue; // a place with no name is unusable
+      // reviewsCount missing → treat as 0, so a below-minimum place is dropped.
+      const reviews = Number.isFinite(Number(it.reviewsCount)) ? Number(it.reviewsCount) : 0;
+      if (reviews < minReviews) {
+        belowMin++;
+        continue;
+      }
       candidates.push({
         business,
         phone: it.phone ? String(it.phone).trim() : null,
         website: it.website ? String(it.website).trim() : null,
         address: it.address ? String(it.address).trim() : null,
         maps_rating: Number.isFinite(Number(it.totalScore)) ? Number(it.totalScore) : null,
+        maps_url: it.url ? String(it.url).trim() : null,
       });
     }
 
@@ -171,6 +186,7 @@ module.exports = async function handler(req, res) {
         notes: null,
         address: c.address,
         maps_rating: c.maps_rating,
+        maps_url: c.maps_url,
         stage: "new",
       });
     }
@@ -189,8 +205,10 @@ module.exports = async function handler(req, res) {
 
     const added = (inserted || []).length;
     // Counts only — never any lead data.
-    console.log(`scrape-leads: scraped=${scraped} added=${added} skipped=${skipped}`);
-    return json(res, 200, { leads: inserted || [], added, skipped, scraped });
+    console.log(
+      `scrape-leads: scraped=${scraped} added=${added} skipped=${skipped} belowMin=${belowMin}`
+    );
+    return json(res, 200, { leads: inserted || [], added, skipped, scraped, belowMin });
   } catch (err) {
     return json(res, 500, { error: err.message || "Lead search failed" });
   } finally {

@@ -27,6 +27,7 @@ const LEAD_FIELDS = [
   "stage",
   "address",
   "maps_rating",
+  "maps_url",
 ];
 
 function json(res, status, body) {
