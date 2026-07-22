@@ -593,8 +593,97 @@
     .call-detail .score-summary { margin-top: 4px; }
     .call-transcript { margin-top: 4px; }
 
+    /* ── Dashboard (read-only metrics) ────────────────────── */
+    .dash {
+      max-width: 1200px; margin: 0 auto; padding: 8px 20px 48px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .dash-group { margin-top: 14px; }
+    .dash-h {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.09em; color: var(--text-lo);
+      margin: 0 0 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .dash-h::before {
+      content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+    }
+    .dash-tiles { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+    .dspan-4  { grid-column: span 4; }
+    .dspan-6  { grid-column: span 6; }
+    .dspan-8  { grid-column: span 8; }
+    .dspan-12 { grid-column: span 12; }
+
+    .tile {
+      background: var(--bg-1); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 5px; min-width: 0;
+    }
+    .tile-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-lo);
+    }
+    .tile-num {
+      font-size: 34px; font-weight: 700; line-height: 1.05; color: var(--text-hi);
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .tile-num[data-score] { color: var(--sc); }
+    .tile-num small { font-size: 16px; font-weight: 600; color: var(--text-lo); }
+    .tile-sub { font-size: 13px; color: var(--text-mid); }
+    .tile-empty { font-size: 13px; color: var(--text-lo); line-height: 1.5; }
+
+    .delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .delta.up   { color: var(--ok); }
+    .delta.down { color: var(--err); }
+    .delta.flat { color: var(--text-lo); }
+
+    /* Funnel bars */
+    .fbar-row { display: grid; grid-template-columns: 132px 1fr 34px; align-items: center; gap: 10px; padding: 5px 0; }
+    .fbar-name { font-size: 12px; color: var(--text-mid); display: flex; align-items: center; gap: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fbar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--col, var(--accent)); flex: 0 0 auto; }
+    .fbar-track { height: 10px; border-radius: 999px; background: var(--bg-2); overflow: hidden; }
+    .fbar-fill { height: 100%; border-radius: 999px; background: var(--col, var(--accent)); min-width: 2px; }
+    .fbar-count { font-family: var(--mono); font-size: 13px; color: var(--text-hi); text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Positive-path conversion */
+    .conv-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .conv-chip { flex: 1 1 150px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; }
+    .conv-step { font-size: 11px; color: var(--text-lo); }
+    .conv-pct { font-size: 22px; font-weight: 700; color: var(--text-hi); font-variant-numeric: tabular-nums; margin-top: 3px; }
+    .conv-pct.muted { color: var(--text-lo); }
+    .conv-dead { font-size: 12px; color: var(--text-mid); margin-top: 12px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+    .conv-dead b { color: var(--text-hi); font-variant-numeric: tabular-nums; }
+
+    /* Skill trend (inline SVG — no chart lib) */
+    /* height:auto → uniform scaling, so the dots stay round at any width. */
+    .trend-svg { width: 100%; height: auto; display: block; overflow: visible; margin-top: 8px; }
+    .trend-svg .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .trend-svg .dot { fill: var(--accent); }
+    .trend-svg .dot.last { fill: var(--accent-hover); stroke: var(--bg-1); stroke-width: 2; }
+    .trend-svg .base { stroke: var(--border); stroke-width: 1; }
+
+    /* Weakest / six-dimension bars */
+    .dim-bars { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
+    .dimbar-row { display: grid; grid-template-columns: 176px 1fr 34px; align-items: center; gap: 10px; }
+    .dimbar-name { font-size: 12px; color: var(--text-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dimbar-row.weak .dimbar-name { color: var(--text-hi); font-weight: 700; }
+    .dimbar-track { height: 8px; border-radius: 999px; background: var(--bg-2); overflow: hidden; }
+    .dimbar-fill { height: 100%; border-radius: 999px; background: var(--sc, var(--accent)); min-width: 2px; }
+    .dimbar-val { font-family: var(--mono); font-size: 12px; color: var(--text-mid); text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Hygiene lists */
+    .hlist { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .hlist-item { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; padding: 8px 11px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; }
+    .hlist-name { color: var(--text-hi); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hlist-meta { color: var(--text-lo); font-size: 12px; white-space: nowrap; flex: 0 0 auto; }
+    .hlist-more { font-size: 12px; color: var(--text-lo); padding: 3px 2px 0; }
+
     /* ── Responsive (mobile-first checks at 380px) ── */
     @media (max-width: 560px) {
+      .dash { padding: 6px 14px 40px; }
+      .dspan-4, .dspan-6, .dspan-8, .dspan-12 { grid-column: span 12; }
+      .fbar-row { grid-template-columns: 108px 1fr 30px; }
+      .dimbar-row { grid-template-columns: 130px 1fr 30px; }
+      .tile-num { font-size: 30px; }
       .form-grid { grid-template-columns: 1fr; }
       .brand p { display: none; }
       .topbar-inner { padding: 10px 16px; }
@@ -622,6 +711,7 @@
       <nav class="tabs" id="tabs">
         <button class="tab active" data-view="coach">Coach</button>
         <button class="tab" data-view="leads">Leads</button>
+        <button class="tab" data-view="dashboard">Dashboard</button>
       </nav>
     </div>
   </header>
@@ -713,6 +803,19 @@
     </div>
     <div class="board" id="board"><!-- columns render here --></div>
     <p class="board-hint">Drag a card between columns to update its outcome. Click a card to edit details or add notes.</p>
+  </div>
+
+  <!-- ── Dashboard (read-only metrics) ────────────────────────── -->
+  <!-- Every number here is deterministic JS over leads + calls already in
+       Supabase. No LLM touches any metric. -->
+  <div id="dashboard-view" class="view hidden">
+    <div class="board-toolbar">
+      <div class="board-title">Dashboard</div>
+      <div class="board-actions">
+        <button class="btn-ghost" id="dash-refresh">Refresh</button>
+      </div>
+    </div>
+    <div class="dash" id="dash"><!-- tiles render here --></div>
   </div>
 
   <!-- Add / edit lead modal -->
@@ -1587,7 +1690,11 @@
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
     document.getElementById('coach-view').classList.toggle('hidden', view !== 'coach');
     document.getElementById('leads-view').classList.toggle('hidden', view !== 'leads');
+    document.getElementById('dashboard-view').classList.toggle('hidden', view !== 'dashboard');
     if (view === 'leads' && !crm.loaded) loadLeads();
+    // Always refetch on open so metrics never go stale after a new call or lead
+    // edit made elsewhere in the session.
+    if (view === 'dashboard') loadDashboard();
   }
   document.getElementById('tabs').addEventListener('click', (e) => {
     const btn = e.target.closest('.tab');
@@ -2252,6 +2359,389 @@
   });
 
   renderBoard(); // empty columns until the Leads tab loads data
+
+  // ══ Dashboard — deterministic metrics over leads + calls ═══════════════
+  // Every number below is plain JS computed from data already in Supabase; no
+  // LLM touches any metric. Reuses STAGES (labels + colours), DIMENSION_LABELS,
+  // escapeHtml, and leadsApi from above.
+  const dash = { loaded: false };
+  const dashEl = document.getElementById('dash');
+  document.getElementById('dash-refresh').addEventListener('click', () => loadDashboard());
+
+  // Stages the pipeline treats as forward progress, in order. Conversion % is
+  // computed only along this path (option b); the dead lanes below are shown as
+  // raw counts, never as ratios.
+  const POSITIVE_PATH = ['new', 'callback', 'interested', 'booked'];
+  const DEAD_LANES = ['no_answer', 'not_interested'];
+  const DIMENSION_KEYS = [
+    'opener_pattern_interrupt', 'offer_clarity', 'problem_tie',
+    'objection_handling', 'close_or_cta', 'permission_and_framing',
+  ];
+
+  const stageLabel = (key) => (STAGES.find((s) => s.key === key) || {}).label || key;
+
+  // Monday 00:00 local time for the week containing `d`.
+  function startOfWeek(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    const dow = (x.getDay() + 6) % 7; // Mon=0 … Sun=6
+    x.setDate(x.getDate() - dow);
+    return x;
+  }
+
+  // A call is "scored" only when rubric_scores carries a numeric overall.
+  const isScored = (c) => c && c.rubric_scores && Number.isFinite(Number(c.rubric_scores.overall_score));
+  const scoreColorVar = (n) => `var(--score-${Math.max(1, Math.min(5, Math.round(n)))})`;
+
+  function fmtDuration(totalSeconds) {
+    const s = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (h) return `${h}h ${m}m`;
+    if (m) return `${m}m`;
+    return `${s}s`;
+  }
+
+  async function loadDashboard() {
+    dashEl.innerHTML = '<p class="board-hint">Loading…</p>';
+    try {
+      const [leadsData, callsData] = await Promise.all([
+        leadsApi('/api/leads', undefined, 'Could not load leads'),
+        leadsApi('/api/calls', undefined, 'Could not load calls'),
+      ]);
+      dash.loaded = true;
+      renderDashboard(leadsData.leads || [], callsData.calls || []);
+    } catch (err) {
+      dashEl.innerHTML = `<p class="board-hint">${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  // ── Activity ──────────────────────────────────────────────
+  function activityHtml(calls) {
+    const now = new Date();
+    const thisMon = startOfWeek(now);
+    const lastMon = new Date(thisMon); lastMon.setDate(lastMon.getDate() - 7);
+    // Errored upload rows aren't real calls — and a retry after an error would
+    // otherwise double-count one call — so they don't count toward activity.
+    const realCalls = calls.filter((c) => c.status !== 'error');
+    let thisCount = 0, lastCount = 0, thisTalk = 0, thisTalkCalls = 0;
+    realCalls.forEach((c) => {
+      const t = new Date(c.created_at);
+      if (t >= thisMon) {
+        thisCount++;
+        const dur = Number(c.duration_seconds);
+        if (Number.isFinite(dur) && dur > 0) { thisTalk += dur; thisTalkCalls++; }
+      } else if (t >= lastMon) {
+        lastCount++;
+      }
+    });
+
+    // Delta vs last week — honest empty state when there's no baseline.
+    let deltaHtml;
+    if (lastCount === 0) {
+      deltaHtml = thisCount === 0
+        ? '<span class="tile-sub">No calls logged yet.</span>'
+        : '<span class="tile-sub">First week tracked — no prior week to compare.</span>';
+    } else {
+      const diff = thisCount - lastCount;
+      const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+      const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '→';
+      const pct = Math.round(Math.abs(diff) / lastCount * 100);
+      deltaHtml = `<span class="tile-sub"><span class="delta ${cls}">${arrow} ${pct}%</span> vs ${lastCount} last week</span>`;
+    }
+    // Count only calls that actually contributed length, so the minutes and the
+    // caption can't disagree when a row has no recorded duration.
+    const talkSub = thisTalkCalls
+      ? `from ${thisTalkCalls} recorded call${thisTalkCalls === 1 ? '' : 's'} this week`
+      : (thisCount ? 'No call length recorded yet this week.' : 'No calls this week yet.');
+
+    return `
+      <div class="dash-tiles">
+        <div class="tile dspan-6">
+          <span class="tile-label">Calls this week</span>
+          <span class="tile-num">${thisCount}</span>
+          ${deltaHtml}
+        </div>
+        <div class="tile dspan-6">
+          <span class="tile-label">Talk time this week</span>
+          <span class="tile-num">${fmtDuration(thisTalk)}</span>
+          <span class="tile-sub">${talkSub}</span>
+        </div>
+      </div>`;
+  }
+
+  // ── Funnel ────────────────────────────────────────────────
+  function funnelHtml(leads) {
+    const validStages = new Set(STAGES.map((s) => s.key));
+    const counts = Object.create(null); // null proto → no inherited-key surprises
+    STAGES.forEach((s) => { counts[s.key] = 0; });
+    let noWebsite = 0;
+    leads.forEach((l) => {
+      const k = validStages.has(l.stage) ? l.stage : 'new';
+      counts[k]++;
+      if (!l.website || !String(l.website).trim()) noWebsite++;
+    });
+    const total = leads.length;
+    const max = Math.max(1, ...STAGES.map((s) => counts[s.key]));
+
+    const bars = STAGES.map((s) => {
+      const n = counts[s.key];
+      const pct = Math.round(n / max * 100);
+      return `
+        <div class="fbar-row">
+          <span class="fbar-name"><span class="fbar-dot" style="background:${s.color}"></span>${escapeHtml(s.label)}</span>
+          <span class="fbar-track"><span class="fbar-fill" style="width:${pct}%;background:${s.color}"></span></span>
+          <span class="fbar-count">${n}</span>
+        </div>`;
+    }).join('');
+
+    // Positive-path funnel (option b). Denominator is "reached this stage OR any
+    // later one", so each rate is a real, monotonic funnel step that can never
+    // exceed 100% — a lead dragged straight to Booked still counts as having
+    // passed the earlier steps.
+    const reachedFrom = (i) => {
+      let sum = 0;
+      for (let j = i; j < POSITIVE_PATH.length; j++) sum += counts[POSITIVE_PATH[j]];
+      return sum;
+    };
+    const convChips = [];
+    for (let i = 0; i < POSITIVE_PATH.length - 1; i++) {
+      const from = POSITIVE_PATH[i], to = POSITIVE_PATH[i + 1];
+      const denom = reachedFrom(i), numer = reachedFrom(i + 1);
+      const has = denom > 0;
+      convChips.push(`
+        <div class="conv-chip">
+          <div class="conv-step">${escapeHtml(stageLabel(from))} → ${escapeHtml(stageLabel(to))}</div>
+          <div class="conv-pct${has ? '' : ' muted'}">${has ? Math.round(numer / denom * 100) + '%' : '—'}</div>
+        </div>`);
+    }
+    const deadHtml = DEAD_LANES.map((k) => `${escapeHtml(stageLabel(k))} <b>${counts[k]}</b>`).join('');
+
+    const funnelBody = total === 0
+      ? '<div class="tile-empty">No leads yet. Add or import leads to see the pipeline.</div>'
+      : bars;
+    const convBody = total === 0
+      ? '<div class="tile-empty">Conversion appears once leads move through the pipeline.</div>'
+      : `<div class="conv-row">${convChips.join('')}</div>
+         <div class="conv-dead">Dead lanes: ${deadHtml}</div>`;
+
+    return `
+      <div class="dash-tiles">
+        <div class="tile dspan-8">
+          <span class="tile-label">Leads by stage</span>
+          <div style="margin-top:8px">${funnelBody}</div>
+        </div>
+        <div class="tile dspan-4">
+          <span class="tile-label">No-website leads</span>
+          <span class="tile-num">${noWebsite}</span>
+          <span class="tile-sub">${total ? `of ${total} total lead${total === 1 ? '' : 's'}` : 'No leads yet.'}</span>
+        </div>
+        <div class="tile dspan-12">
+          <span class="tile-label">Positive-path conversion</span>
+          <div style="margin-top:8px">${convBody}</div>
+        </div>
+      </div>`;
+  }
+
+  // ── Skill ─────────────────────────────────────────────────
+  // Inline SVG trend — width:100% + height:auto keeps it round & undistorted.
+  function trendSvg(scores) {
+    const W = 320, H = 88, padX = 10, padY = 12;
+    const n = scores.length;
+    const x = (i) => padX + (W - 2 * padX) * (n === 1 ? 0.5 : i / (n - 1));
+    const y = (v) => padY + (H - 2 * padY) * (1 - (v - 1) / 4); // score 1..5 → bottom..top
+    const line = scores.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const dots = scores.map((v, i) =>
+      `<circle class="dot${i === n - 1 ? ' last' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === n - 1 ? 4 : 3}"></circle>`
+    ).join('');
+    return `
+      <svg class="trend-svg" viewBox="0 0 ${W} ${H}" role="img"
+           aria-label="Overall score across the last ${n} scored calls, 1 to 5">
+        <line class="base" x1="${padX}" y1="${y(1).toFixed(1)}" x2="${W - padX}" y2="${y(1).toFixed(1)}"></line>
+        <path class="line" d="${line}"></path>
+        ${dots}
+      </svg>`;
+  }
+
+  function skillHtml(calls) {
+    const scored = calls.filter(isScored).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    // A single scored call can't honestly support an average, a trend, or a
+    // "weakest dimension" — hold all three to the same ≥2 threshold as the line,
+    // so the whole Skill group tells one consistent story on thin data.
+    const notEnough = scored.length < 2;
+    const notEnoughMsg = scored.length === 0
+      ? 'Score a call to see this.'
+      : 'Not enough data yet — score at least 2 calls. (1 scored so far.)';
+
+    // Average overall.
+    let avgHtml;
+    if (notEnough) {
+      avgHtml = `
+        <div class="tile dspan-4">
+          <span class="tile-label">Average overall score</span>
+          <span class="tile-num">—</span>
+          <span class="tile-empty">${notEnoughMsg}</span>
+        </div>`;
+    } else {
+      const avg = scored.reduce((s, c) => s + Number(c.rubric_scores.overall_score), 0) / scored.length;
+      avgHtml = `
+        <div class="tile dspan-4">
+          <span class="tile-label">Average overall score</span>
+          <span class="tile-num" data-score="${Math.round(avg)}" style="--sc:${scoreColorVar(avg)}">${avg.toFixed(1)}<small>/5</small></span>
+          <span class="tile-sub">across ${scored.length} scored call${scored.length === 1 ? '' : 's'}</span>
+        </div>`;
+    }
+
+    // Trend across the last 10 scored calls — a line needs at least 2 points.
+    const last10 = scored.slice(-10);
+    let trendHtml;
+    if (notEnough) {
+      trendHtml = `
+        <div class="tile dspan-8">
+          <span class="tile-label">Score trend · last 10 calls</span>
+          <div class="tile-empty" style="margin-top:6px">${notEnoughMsg}</div>
+        </div>`;
+    } else {
+      trendHtml = `
+        <div class="tile dspan-8">
+          <span class="tile-label">Score trend · last ${last10.length} scored calls</span>
+          ${trendSvg(last10.map((c) => Number(c.rubric_scores.overall_score)))}
+        </div>`;
+    }
+
+    // Weakest dimension + all six averages.
+    let weakHtml;
+    if (notEnough) {
+      weakHtml = `
+        <div class="tile dspan-12">
+          <span class="tile-label">Weakest dimension</span>
+          <div class="tile-empty" style="margin-top:6px">${notEnoughMsg}</div>
+        </div>`;
+    } else {
+      const validDims = new Set(DIMENSION_KEYS);
+      const sums = Object.create(null), cnts = Object.create(null);
+      DIMENSION_KEYS.forEach((k) => { sums[k] = 0; cnts[k] = 0; });
+      scored.forEach((c) => {
+        (c.rubric_scores.dimensions || []).forEach((d) => {
+          if (!validDims.has(d.key) || !Number.isFinite(Number(d.score))) return;
+          sums[d.key] += Number(d.score); cnts[d.key]++;
+        });
+      });
+      const avgs = DIMENSION_KEYS.filter((k) => cnts[k] > 0).map((k) => ({ key: k, avg: sums[k] / cnts[k] }));
+      if (!avgs.length) {
+        weakHtml = `
+          <div class="tile dspan-12">
+            <span class="tile-label">Weakest dimension</span>
+            <div class="tile-empty" style="margin-top:6px">No dimension scores available yet.</div>
+          </div>`;
+      } else {
+        const weakest = avgs.reduce((lo, x) => (x.avg < lo.avg ? x : lo), avgs[0]);
+        const bars = avgs.map((x) => {
+          const pct = Math.round(x.avg / 5 * 100);
+          return `
+            <div class="dimbar-row${x.key === weakest.key ? ' weak' : ''}" style="--sc:${scoreColorVar(x.avg)}">
+              <span class="dimbar-name">${escapeHtml(DIMENSION_LABELS[x.key] || x.key)}</span>
+              <span class="dimbar-track"><span class="dimbar-fill" style="width:${pct}%"></span></span>
+              <span class="dimbar-val">${x.avg.toFixed(1)}</span>
+            </div>`;
+        }).join('');
+        weakHtml = `
+          <div class="tile dspan-12">
+            <span class="tile-label">Weakest dimension — <strong style="color:var(--text-hi)">${escapeHtml(DIMENSION_LABELS[weakest.key] || weakest.key)}</strong> (${weakest.avg.toFixed(1)}/5)</span>
+            <div class="dim-bars">${bars}</div>
+          </div>`;
+      }
+    }
+
+    return `<div class="dash-tiles">${avgHtml}${trendHtml}${weakHtml}</div>`;
+  }
+
+  // ── Hygiene ───────────────────────────────────────────────
+  function hygieneHtml(leads, calls) {
+    const calledLeadIds = new Set(calls.map((c) => c.lead_id).filter(Boolean).map(String));
+    // Newest linked call per lead (ms epoch).
+    const lastCallByLead = {};
+    calls.forEach((c) => {
+      if (!c.lead_id) return;
+      const k = String(c.lead_id);
+      const t = new Date(c.created_at).getTime();
+      if (!lastCallByLead[k] || t > lastCallByLead[k]) lastCallByLead[k] = t;
+    });
+
+    const now = Date.now();
+    const WEEK = 7 * 24 * 3600 * 1000;
+    const leadTouched = (l) => {
+      const call = lastCallByLead[String(l.id)] || 0;
+      const edited = l.updated_at ? new Date(l.updated_at).getTime()
+        : (l.created_at ? new Date(l.created_at).getTime() : 0);
+      return Math.max(call, edited || 0);
+    };
+    const daysAgo = (t) => Math.floor((now - t) / (24 * 3600 * 1000));
+    const leadName = (l) => l.business || l.name || 'Untitled lead';
+
+    const neverCalled = leads.filter((l) => !calledLeadIds.has(String(l.id)));
+    // Stale = last activity (call or edit) is 7+ days old.
+    const stale = leads
+      .map((l) => ({ l, t: leadTouched(l) }))
+      .filter((x) => x.t > 0 && (now - x.t) >= WEEK)
+      .sort((a, b) => a.t - b.t)
+      .map((x) => x.l);
+
+    function listTile(label, items, metaFor, emptyMsg) {
+      if (!leads.length) {
+        return `<div class="tile dspan-6"><span class="tile-label">${label}</span><div class="tile-empty" style="margin-top:6px">No leads yet.</div></div>`;
+      }
+      const shown = items.slice(0, 6);
+      const body = items.length === 0
+        ? `<div class="tile-empty" style="margin-top:6px">${emptyMsg}</div>`
+        : `<div class="hlist">${shown.map((l) => `
+              <div class="hlist-item">
+                <span class="hlist-name">${escapeHtml(leadName(l))}</span>
+                <span class="hlist-meta">${escapeHtml(metaFor(l))}</span>
+              </div>`).join('')}</div>` +
+          (items.length > shown.length ? `<div class="hlist-more">+${items.length - shown.length} more</div>` : '');
+      return `
+        <div class="tile dspan-6">
+          <span class="tile-label">${label}</span>
+          <span class="tile-num">${items.length}</span>
+          ${body}
+        </div>`;
+    }
+
+    const neverTile = listTile(
+      'Leads never called', neverCalled,
+      (l) => stageLabel(l.stage || 'new'),
+      'Every lead has at least one linked call. Nice.'
+    );
+    const staleTile = listTile(
+      'No activity in 7+ days', stale,
+      (l) => `${daysAgo(leadTouched(l))}d ago`,
+      'Everything has been touched in the last week.'
+    );
+
+    return `<div class="dash-tiles">${neverTile}${staleTile}</div>`;
+  }
+
+  function renderDashboard(leads, calls) {
+    dashEl.innerHTML = `
+      <section class="dash-group">
+        <h2 class="dash-h">Activity</h2>
+        ${activityHtml(calls)}
+      </section>
+      <section class="dash-group">
+        <h2 class="dash-h">Funnel</h2>
+        ${funnelHtml(leads)}
+      </section>
+      <section class="dash-group">
+        <h2 class="dash-h">Skill</h2>
+        ${skillHtml(calls)}
+      </section>
+      <section class="dash-group">
+        <h2 class="dash-h">Hygiene</h2>
+        ${hygieneHtml(leads, calls)}
+      </section>`;
+  }
   </script>
 </body>
 </html>

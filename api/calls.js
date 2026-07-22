@@ -44,7 +44,21 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "GET") {
       const leadId = getQuery(req, "lead_id");
-      if (!leadId) return json(res, 400, { error: "Missing lead_id" });
+
+      // No lead_id → Dashboard list of every call for this user. Lean select
+      // (no transcript — the dashboard never needs it, and rows can be large):
+      // just what the deterministic metrics compute over (§ dashboard).
+      if (!leadId) {
+        const rows = await supabaseFetch(
+          `/rest/v1/calls?user_id=eq.${encodeURIComponent(userId)}` +
+            `&select=id,created_at,status,duration_seconds,rubric_scores,lead_id` +
+            `&order=created_at.desc`
+        );
+        // Counts-only logging — never transcripts, scores, or lead identifiers.
+        console.log(`[calls] dashboard list: ${(rows || []).length} calls`);
+        return json(res, 200, { calls: rows || [] });
+      }
+
       const rows = await supabaseFetch(
         `/rest/v1/calls?user_id=eq.${encodeURIComponent(userId)}` +
           `&lead_id=eq.${encodeURIComponent(leadId)}` +
