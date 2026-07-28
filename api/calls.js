@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
       const rows = await supabaseFetch(
         `/rest/v1/calls?user_id=eq.${encodeURIComponent(userId)}` +
           `&lead_id=eq.${encodeURIComponent(leadId)}` +
-          `&select=id,created_at,status,rubric_scores,transcript` +
+          `&select=id,created_at,status,rubric_scores,transcript,rep_speaker` +
           `&order=created_at.desc`
       );
       return json(res, 200, { calls: rows || [] });
@@ -73,23 +73,52 @@ module.exports = async function handler(req, res) {
       if (!id) return json(res, 400, { error: "Missing call id" });
 
       const payload = await readJson(req);
-      if (payload.lead_id === undefined) {
+
+      // Two independent writers share this route: the CRM's attach/detach
+      // (lead_id) and the Coach panel's rep-speaker + metrics save — the design
+      // doc's "save-analysis" step, folded in here rather than a fourth
+      // function. Only fields actually present in the body are written, so
+      // neither writer clobbers the other's columns.
+      const patch = {};
+
+      if (payload.lead_id !== undefined) {
+        // A string links the call; null/"" detaches it.
+        patch.lead_id =
+          payload.lead_id === null || payload.lead_id === "" ? null : String(payload.lead_id);
+      }
+
+      if (payload.rep_speaker !== undefined) {
+        const rep = payload.rep_speaker === null ? null : Number(payload.rep_speaker);
+        if (rep !== null && !Number.isInteger(rep)) {
+          return json(res, 400, { error: "rep_speaker must be an integer" });
+        }
+        patch.rep_speaker = rep;
+      }
+
+      if (payload.metrics !== undefined) {
+        // Computed in the browser from the diarized turns (the model never does
+        // this arithmetic). null when diarization returned under 2 speakers.
+        const metrics = payload.metrics;
+        if (metrics !== null && (typeof metrics !== "object" || Array.isArray(metrics))) {
+          return json(res, 400, { error: "metrics must be an object or null" });
+        }
+        patch.metrics = metrics;
+      }
+
+      if (!Object.keys(patch).length) {
         return json(res, 400, { error: "Nothing to update" });
       }
-      // A string links the call; null/"" detaches it.
-      const leadId =
-        payload.lead_id === null || payload.lead_id === "" ? null : String(payload.lead_id);
 
       const updated = await supabaseFetch(
         `/rest/v1/calls?id=eq.${encodeURIComponent(id)}` +
-          `&user_id=eq.${encodeURIComponent(userId)}&select=id,lead_id`,
+          `&user_id=eq.${encodeURIComponent(userId)}&select=id,lead_id,rep_speaker`,
         {
           method: "PATCH",
           headers: {
             "content-type": "application/json",
             prefer: "return=representation",
           },
-          body: JSON.stringify({ lead_id: leadId }),
+          body: JSON.stringify(patch),
         }
       );
       if (!updated || !updated.length) {

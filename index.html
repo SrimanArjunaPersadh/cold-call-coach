@@ -246,6 +246,61 @@
     .turn[data-speaker="1"] .speaker { color: var(--score-5); }
     .turn-time { font-family: var(--mono); font-size: 11px; color: var(--text-lo); }
     .turn-text { color: var(--text-mid); }
+    /* Rep-relative colouring — once rep_speaker is known, "you" always reads as
+       the accent and the prospect as teal, whichever index the diarizer chose.
+       Declared after the data-speaker rules so it wins at equal specificity. */
+    .turn[data-rep="1"] .speaker { color: var(--accent); }
+    .turn[data-rep="0"] .speaker { color: var(--score-5); }
+
+    /* --- Rep-speaker swap (§2 decision #3) --- */
+    .speaker-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .rep-chip {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px; border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      color: var(--accent); font-size: 12px; font-weight: 600;
+    }
+    .swap-btn {
+      padding: 5px 11px; border-radius: 8px; cursor: pointer;
+      background: var(--bg-2); border: 1px solid var(--border-strong);
+      color: var(--text-hi); font-size: 12px; font-weight: 600;
+    }
+    .swap-btn:hover:not(:disabled) { background: var(--bg-3); }
+    .swap-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .swap-note { font-size: 12px; color: var(--text-lo); }
+
+    /* --- Metrics (§5b — computed in JS, never by the model) --- */
+    .metric-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+    .metric-tile {
+      flex: 1 1 150px; min-width: 140px; padding: 14px 16px;
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .metric-value {
+      font-size: 26px; font-weight: 700; line-height: 1.1;
+      color: var(--text-hi); font-variant-numeric: tabular-nums;
+    }
+    .metric-label {
+      margin-top: 6px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-lo);
+    }
+    .metric-sub { margin-top: 4px; font-size: 12px; color: var(--text-mid); }
+    /* Talk:listen must never look more precise than mixed mono can justify */
+    .estimate-tag {
+      display: inline-block; margin-left: 5px; padding: 1px 5px; border-radius: 999px;
+      background: color-mix(in srgb, var(--warn) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+      color: var(--warn); font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    }
+    .metric-caveat { margin: 12px 0 0; font-size: 12px; color: var(--text-lo); }
+    .metric-warn {
+      margin: 0; padding: 12px 14px; border-radius: var(--radius);
+      background: color-mix(in srgb, var(--warn) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+      color: var(--text-hi); font-size: 13px;
+    }
+    .save-note { margin: 10px 0 0; font-size: 11px; color: var(--text-lo); }
+    .save-note.err { color: var(--err); }
 
     /* --- Scores --- */
     .score-summary { display: flex; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -778,10 +833,21 @@
       </label>
     </section>
 
-    <!-- Later tasks (§9 steps 3–8) mount below. Empty states for now. -->
     <section class="panel" id="transcript-panel">
       <h2>Transcript</h2>
+      <!-- Rep identity: first speaker defaults to you; one click fixes the rest (§2 #3) -->
+      <div class="speaker-bar hidden" id="speaker-bar">
+        <span class="rep-chip" id="rep-chip"></span>
+        <button type="button" class="swap-btn" id="swap-btn">Swap speakers</button>
+        <span class="swap-note" id="swap-note"></span>
+      </div>
       <div id="transcript-body"><p class="placeholder">No transcript yet.</p></div>
+    </section>
+    <!-- Quantitative half of the analysis (§5b) — kept apart from the rubric -->
+    <section class="panel" id="metrics-panel">
+      <h2>Metrics</h2>
+      <div id="metrics-body"><p class="placeholder">No metrics yet.</p></div>
+      <p class="save-note hidden" id="metrics-save" role="status" aria-live="polite"></p>
     </section>
     <section class="panel" id="scores-panel">
       <h2>Scores</h2>
@@ -984,6 +1050,12 @@
     uploadStatus: document.getElementById('upload-status'),
     transcriptBody: document.getElementById('transcript-body'),
     scoresBody:     document.getElementById('scores-body'),
+    speakerBar:  document.getElementById('speaker-bar'),
+    repChip:     document.getElementById('rep-chip'),
+    swap:        document.getElementById('swap-btn'),
+    swapNote:    document.getElementById('swap-note'),
+    metricsBody: document.getElementById('metrics-body'),
+    metricsSave: document.getElementById('metrics-save'),
   };
 
   // State → presentation. `record` = is the Record button enabled.
@@ -1122,6 +1194,7 @@
     els.hint.textContent = '';
     els.analyze.disabled = true;
     resetAttach();                            // last call's attach UI is stale now
+    resetAnalysis();                          // ...and so are its transcript/metrics/scores
     if (recording && els.playback.src) URL.revokeObjectURL(els.playback.src);
 
     let stream;
@@ -1238,21 +1311,35 @@
 
   // Pure HTML builder — shared by the Coach transcript panel and the lead
   // card's Calls section (§ link-calls). Returns a placeholder when empty.
-  function transcriptHtml(turns) {
+  // `repSpeaker` is optional: omit it (or pass null) and turns fall back to raw
+  // diarizer indices. Once it's known, turns read You / Prospect — but only when
+  // exactly two voices were found; with three we stay literal rather than guess.
+  function transcriptHtml(turns, repSpeaker) {
     if (!turns || !turns.length) {
       return '<p class="placeholder">No transcript returned.</p>';
     }
-    return turns.map((turn) => `
-      <div class="turn" data-speaker="${turn.speaker}">
+    const known = repSpeaker !== null && repSpeaker !== undefined;
+    const twoWay = distinctSpeakers(turns).length === 2;
+    return turns.map((turn) => {
+      const isRep = known && Number(turn.speaker) === Number(repSpeaker);
+      const label = !known ? `Speaker ${turn.speaker}`
+        : isRep ? 'You'
+        : twoWay ? 'Prospect'
+        : `Speaker ${turn.speaker}`;
+      return `
+      <div class="turn" data-speaker="${turn.speaker}"${known ? ` data-rep="${isRep ? 1 : 0}"` : ''}>
         <div class="turn-head">
-          <span class="speaker">Speaker ${turn.speaker}</span>
+          <span class="speaker">${escapeHtml(label)}</span>
           <span class="turn-time">${fmtTime(turn.start)}&ndash;${fmtTime(turn.end)}</span>
         </div>
         <div class="turn-text">${escapeHtml(turn.text)}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
-  function renderTranscript(turns) { els.transcriptBody.innerHTML = transcriptHtml(turns); }
+  function renderTranscript(turns, repSpeaker) {
+    els.transcriptBody.innerHTML = transcriptHtml(turns, repSpeaker);
+  }
 
   // Human labels for the six fixed Hormozi dimensions (PHASE1-DESIGN §5a).
   const DIMENSION_LABELS = {
@@ -1296,6 +1383,205 @@
       ${cards}`;
   }
   function renderScores(scores) { els.scoresBody.innerHTML = scoresHtml(scores); }
+
+  // ══ Metrics — computed here in JS, never by the model (PHASE1-DESIGN §5b) ══
+  // Everything below is derived from transcript[] plus the confirmed
+  // rep_speaker, so a speaker swap recomputes instantly with no extra API call.
+
+  // The design's exact list. It is a plain word match, so conversational
+  // "so"/"like"/"right" inflate the count — surfaced as a caveat, not hidden.
+  const FILLER_RE = /\b(um|uh|like|you know|so|basically|literally|right)\b/gi;
+  const MONOLOGUE_GAP = 1.5;  // s — a shorter silence doesn't end a monologue
+  const METRICS_VERSION = 1;  // bump if the filler list or formulas change
+
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const turnSeconds = (t) => Math.max(0, (Number(t.end) || 0) - (Number(t.start) || 0));
+
+  function distinctSpeakers(turns) {
+    return [...new Set((turns || []).map((t) => Number(t.speaker)))]
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b);
+  }
+
+  function computeMetrics(turns, repSpeaker) {
+    if (!turns || !turns.length || repSpeaker === null || repSpeaker === undefined) return null;
+
+    let repSeconds = 0, totalSeconds = 0, fillerCount = 0;
+    let bestRun = 0, runStart = null, runEnd = 0;
+
+    turns.forEach((turn) => {
+      totalSeconds += turnSeconds(turn);
+
+      if (Number(turn.speaker) !== Number(repSpeaker)) {
+        runStart = null;             // a prospect turn always breaks the run
+        return;
+      }
+
+      repSeconds += turnSeconds(turn);
+      fillerCount += (String(turn.text || '').match(FILLER_RE) || []).length;
+
+      // Consecutive rep turns extend the run; a gap over MONOLOGUE_GAP starts
+      // a fresh one. bestRun stays current, so the prospect branch just resets.
+      const start = Number(turn.start) || 0;
+      if (runStart === null || start - runEnd > MONOLOGUE_GAP) runStart = start;
+      runEnd = Math.max(start, Number(turn.end) || start);
+      bestRun = Math.max(bestRun, runEnd - runStart);
+    });
+
+    const repMinutes = repSeconds / 60;
+    return {
+      version: METRICS_VERSION,
+      rep_speaker: Number(repSpeaker),
+      talk_listen: {
+        rep_seconds: round1(repSeconds),
+        total_seconds: round1(totalSeconds),
+        // Whole percent only — mixed mono can't justify a decimal place.
+        rep_pct: totalSeconds > 0 ? Math.round((repSeconds / totalSeconds) * 100) : null,
+      },
+      longest_monologue_seconds: round1(bestRun),
+      fillers: {
+        count: fillerCount,
+        per_minute: repMinutes > 0 ? round1(fillerCount / repMinutes) : null,
+      },
+    };
+  }
+
+  function metricsHtml(turns, repSpeaker) {
+    if (!turns || !turns.length) return '<p class="placeholder">No metrics yet.</p>';
+
+    // §8.1 graceful degradation. One speaker means diarization failed on the
+    // mixed-mono track; every metric here needs you split from the prospect,
+    // so withhold them loudly instead of printing confident nonsense.
+    if (distinctSpeakers(turns).length < 2) {
+      return `<p class="metric-warn"><strong>Diarization returned a single speaker.</strong>
+        Talk-to-listen, longest monologue and filler rate all need your voice separated from
+        the prospect's, so they're withheld for this call rather than shown wrong. The
+        transcript above and the call-level scores below are unaffected.</p>`;
+    }
+
+    const m = computeMetrics(turns, repSpeaker);
+    if (!m) return '<p class="placeholder">No metrics yet.</p>';
+
+    const pct = m.talk_listen.rep_pct;
+    const perMin = m.fillers.per_minute;
+    return `
+      <div class="metric-grid">
+        <div class="metric-tile">
+          <div class="metric-value">${pct === null ? '&mdash;' : `~${pct}%`}</div>
+          <div class="metric-label">You talking <span class="estimate-tag">ESTIMATE</span></div>
+          <div class="metric-sub">${fmtTime(m.talk_listen.rep_seconds)} of ${fmtTime(m.talk_listen.total_seconds)} spoken.</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-value">${fmtTime(m.longest_monologue_seconds)}</div>
+          <div class="metric-label">Longest monologue</div>
+          <div class="metric-sub">Your longest unbroken stretch.</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-value">${m.fillers.count}</div>
+          <div class="metric-label">Filler words</div>
+          <div class="metric-sub">${perMin === null ? 'Rate unavailable.' : `${perMin} per minute of your speech.`}</div>
+        </div>
+      </div>
+      <p class="metric-caveat">Talk-to-listen is an estimate &mdash; one mixed-mono track can't
+        cleanly attribute overlapping speech. Fillers are a plain word match, so conversational
+        &ldquo;so&rdquo;, &ldquo;like&rdquo; and &ldquo;right&rdquo; inflate the count.</p>`;
+  }
+
+  // ══ Rep identity + persistence (§2 #3, §9 step 7) ══════════════════
+  // Default: whoever speaks first is the rep — on an outbound cold call that's
+  // you ~95% of the time. The swap button fixes the rest with zero model calls.
+
+  let analysis = { callId: null, turns: [], repSpeaker: null };
+  let persistTimer = 0;
+
+  function setSaveNote(tone, text) {
+    els.metricsSave.textContent = text;
+    els.metricsSave.className = 'save-note' + (tone ? ' ' + tone : '');
+    els.metricsSave.classList.toggle('hidden', !text);
+  }
+
+  function resetAnalysis() {
+    clearTimeout(persistTimer);
+    analysis = { callId: null, turns: [], repSpeaker: null };
+    els.transcriptBody.innerHTML = '<p class="placeholder">No transcript yet.</p>';
+    els.metricsBody.innerHTML = '<p class="placeholder">No metrics yet.</p>';
+    els.scoresBody.innerHTML = '<p class="placeholder">Not scored yet.</p>';
+    els.speakerBar.classList.add('hidden');
+    setSaveNote('', '');
+  }
+
+  function setAnalysis(callId, turns) {
+    const list = Array.isArray(turns) ? turns : [];
+    analysis = {
+      callId,
+      turns: list,
+      repSpeaker: list.length ? Number(list[0].speaker) : null,
+    };
+    renderAnalysis();
+    persistAnalysis();
+  }
+
+  function renderAnalysis() {
+    renderTranscript(analysis.turns, analysis.repSpeaker);
+    els.metricsBody.innerHTML = metricsHtml(analysis.turns, analysis.repSpeaker);
+    renderSpeakerBar();
+  }
+
+  function renderSpeakerBar() {
+    const speakers = distinctSpeakers(analysis.turns);
+    const swappable = speakers.length >= 2;
+    els.speakerBar.classList.toggle('hidden', !analysis.turns.length);
+    els.repChip.textContent = analysis.repSpeaker === null
+      ? 'Speaker unknown'
+      : `You = Speaker ${analysis.repSpeaker}`;
+    els.swap.disabled = !swappable;
+    // With 3+ diarized voices "swap" is meaningless, so the button cycles.
+    els.swap.textContent = speakers.length > 2 ? 'Next speaker' : 'Swap speakers';
+    els.swapNote.textContent = swappable
+      ? 'Labelled wrong? Swap — metrics recompute instantly.'
+      : 'Only one speaker detected — nothing to swap.';
+  }
+
+  function swapRepSpeaker() {
+    const speakers = distinctSpeakers(analysis.turns);
+    if (speakers.length < 2) return;
+    const i = speakers.indexOf(Number(analysis.repSpeaker));
+    analysis.repSpeaker = speakers[(i + 1) % speakers.length];
+    renderAnalysis();
+    persistAnalysis();
+  }
+
+  // Persist rep_speaker + metrics (the doc's /api/save-analysis step, folded
+  // into the existing calls route). Debounced so rapid swaps write once.
+  function persistAnalysis() {
+    if (!analysis.callId || analysis.repSpeaker === null) return;
+    clearTimeout(persistTimer);
+    setSaveNote('', 'Saving speaker & metrics…');
+    persistTimer = setTimeout(async () => {
+      const { callId, turns, repSpeaker } = analysis;
+      // Below two speakers the numbers are meaningless — store null, not noise.
+      const metrics = distinctSpeakers(turns).length >= 2
+        ? computeMetrics(turns, repSpeaker)
+        : null;
+      try {
+        const res = await apiFetch(`/api/calls?id=${encodeURIComponent(callId)}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ rep_speaker: repSpeaker, metrics }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Save failed (${res.status}).`);
+        }
+        if (analysis.callId === callId) setSaveNote('', 'Speaker & metrics saved.');
+      } catch (err) {
+        if (analysis.callId !== callId) return;
+        setSaveNote('err', `${err.message} The metrics above are still correct — they're computed locally.`);
+      }
+    }, 500);
+  }
+
+  els.swap.addEventListener('click', swapRepSpeaker);
 
   function escapeHtml(value) {
     return String(value)
@@ -1498,7 +1784,7 @@
           </summary>
           <div class="call-detail">
             ${scoresHtml(scores)}
-            <div class="call-transcript">${transcriptHtml(c.transcript)}</div>
+            <div class="call-transcript">${transcriptHtml(c.transcript, c.rep_speaker)}</div>
           </div>
         </details>`;
     }).join('');
@@ -1567,6 +1853,7 @@
   async function analyzeRecording() {
     if (!recording) return;
     els.analyze.disabled = true;
+    resetAnalysis();   // don't leave the previous call's transcript/metrics on screen
     setUploadStatus('', 'Creating upload slot...');
     els.hint.textContent = 'Saving the recording before transcription.';
 
@@ -1609,7 +1896,8 @@
       const analyzeJson = await analyzeRes.json().catch(() => ({}));
       if (!analyzeRes.ok) throw new Error(analyzeJson.error || 'Could not make transcript.');
 
-      renderTranscript(analyzeJson.transcript);
+      // Seeds rep_speaker from the first voice, renders turns + metrics, saves.
+      setAnalysis(createJson.call_id, analyzeJson.transcript);
       renderScores(analyzeJson.rubric_scores);
       setUploadStatus('ok', `Transcript and coaching scores ready for recording ${createJson.call_id}.`);
       els.hint.textContent = 'Transcript and coaching scores ready.';
