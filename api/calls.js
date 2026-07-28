@@ -1,11 +1,13 @@
-const { requireEnv, supabaseFetch } = require("./_supabase");
+const { encodeStoragePath, getBucket, requireEnv, supabaseFetch } = require("./_supabase");
 const { requireSecret } = require("./_auth");
 
 const DEFAULT_USER_ID = "solo";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Read + link calls for the CRM. GET lists a lead's calls (Calls section on the
 // lead card); PATCH sets/clears a call's lead_id (fallback "Attach to lead" and
-// its detach). Scoring/transcription live in analyze.js and are untouched here.
+// its detach); DELETE removes one call and its recording. Scoring/transcription
+// live in analyze.js and are untouched here.
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -31,6 +33,36 @@ function getQuery(req, key) {
   } catch (_) {
     return "";
   }
+}
+
+// Remove one object from the recordings bucket with the service-role key
+// (server-side only — this key never reaches the browser).
+//
+// Returns "deleted", or "missing" when Storage says the object isn't there:
+// an already-gone recording is the state the caller wanted, so that's success.
+// A 404 for a *bucket* that doesn't exist is a config problem, not a
+// successful cleanup — it throws, so the caller keeps the row and the delete
+// stays retryable.
+async function deleteStorageObject(storagePath) {
+  const url = requireEnv("SUPABASE_URL").replace(/\/$/, "");
+  const serviceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const bucket = getBucket();
+
+  const res = await fetch(
+    `${url}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeStoragePath(storagePath)}`,
+    {
+      method: "DELETE",
+      headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` },
+    }
+  );
+
+  if (res.ok) return "deleted";
+  if (res.status === 404) {
+    const text = await res.text().catch(() => "");
+    if (/bucket/i.test(text)) throw new Error("Storage bucket not found");
+    return "missing";
+  }
+  throw new Error(`Storage delete failed: ${res.status}`);
 }
 
 module.exports = async function handler(req, res) {
@@ -127,7 +159,48 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { call: updated[0] });
     }
 
-    res.setHeader("allow", "GET, PATCH");
+    if (req.method === "DELETE") {
+      const id = getQuery(req, "id");
+      if (!UUID_RE.test(id)) return json(res, 400, { error: "Missing or malformed call id" });
+
+      // Server-side clamp: every statement below is scoped to this user. A row
+      // owned by anyone else reads as "not found" and is never touched — the
+      // browser cannot widen this by asking differently.
+      const rows = await supabaseFetch(
+        `/rest/v1/calls?id=eq.${encodeURIComponent(id)}` +
+          `&user_id=eq.${encodeURIComponent(userId)}&select=id,audio_path`
+      );
+      const call = rows && rows[0];
+      if (!call) return json(res, 404, { error: "Call not found" });
+
+      // Object first, row second. If Storage fails, the row stays put with its
+      // audio_path intact, so the whole delete can simply be retried; dropping
+      // the row first would strand the object with nothing pointing at it.
+      // "pending/…" is the placeholder create-upload writes before the real
+      // path is known — there is no object behind it.
+      let storage = "skipped";
+      const audioPath = call.audio_path ? String(call.audio_path) : "";
+      if (audioPath && !audioPath.startsWith("pending/")) {
+        try {
+          storage = await deleteStorageObject(audioPath);
+        } catch (err) {
+          console.error(`[calls] storage delete failed: ${err.message}`);
+          return json(res, 500, { error: "Could not delete the recording. The call was kept." });
+        }
+      }
+
+      await supabaseFetch(
+        `/rest/v1/calls?id=eq.${encodeURIComponent(id)}` +
+          `&user_id=eq.${encodeURIComponent(userId)}`,
+        { method: "DELETE", headers: { prefer: "return=minimal" } }
+      );
+
+      // Counts/outcome only — never the path, transcript, or lead identifier.
+      console.log(`[calls] deleted 1 call (storage: ${storage})`);
+      return json(res, 200, { deleted: true, storage });
+    }
+
+    res.setHeader("allow", "GET, PATCH, DELETE");
     return json(res, 405, { error: "Method not allowed" });
   } catch (err) {
     return json(res, 500, { error: err.message || "Calls request failed" });
