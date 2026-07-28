@@ -337,7 +337,7 @@ Chrome + a real phone); Claude Code cannot reach that server.
 | Metrics | ✓ "No metrics yet." | ✓ save note "Saving speaker & metrics…" | ✓ single-speaker warn block; save-note error variant | ✓ 3 tiles + ESTIMATE badge + caveat |
 | Scores | ✓ "Not scored yet." | ✓ shares the Analyze status line | ✓ "No scores returned." | ✓ overall tile, top fix, six dimension rows |
 | Attach-to-lead combobox | ✓ "No leads match." | ✓ "Linking…" | ✓ red attach status with the server message | ✓ "Linked to <business>." |
-| Leads board | ✓ per-column "Drop leads here" | ✗ **gap** — no loading state; columns stay as-is until the fetch lands | ✓ board replaced by the error message ("run `vercel dev`…") | ✓ six stage columns with counts |
+| Leads board | ✓ per-column "Drop leads here" | ✓ six columns + 2 `.card-skeleton` each, counts render `·` not `0`, all four toolbar buttons disabled, `aria-busy` | ✓ board replaced by the error message ("run `vercel dev`…") | ✓ six stage columns with counts |
 | Lead modal → Calls | ✓ "No calls yet." | ✓ "Loading calls…" | ✓ placeholder carries the error message | ✓ collapsible per-call score / metrics / transcript + Delete |
 | Delete call | — | ⚠ button disabled only, no text | ✓ toast + button re-enabled for retry | ✓ "Call deleted" toast, list reloads |
 | CSV import | ✓ step 2 hidden until a file is picked | ⚠ Import button disabled only, no text (parse is synchronous) | ✓ toasts: not-a-CSV guard, header-row check, per-request failure | ✓ "Imported N leads · skipped M…" |
@@ -345,7 +345,20 @@ Chrome + a real phone); Claude Code cannot reach that server.
 | Dashboard | ✓ per-tile empties ("No calls logged yet.", "Score a call to see this.", "Not enough data yet — score at least 2 calls.") | ✓ "Loading…" | ✓ error message in place of the tiles | ✓ Activity / Funnel / Skill / Hygiene groups |
 | Unlock (secret) | ✓ modal on first API call | — | ✓ "That passphrase was rejected. Try again." | ✓ stored in `sessionStorage`, retried once |
 
-Known gaps: the three ⚠/✗ rows above. Nothing else ships happy-path-only.
+Known gaps: the three ⚠ rows above. Nothing else ships happy-path-only.
+
+**Why the board loads the way it does.** A spinner over a blank board is
+indistinguishable from "you have no leads yet", so the six columns stay put and
+fill with skeleton placeholders instead, and the per-column and header counts
+print `·` rather than `0` until the real number is known. The placeholders use
+`.card-skeleton`, **not** `.lead-card` — the board's `pointerdown` handler keys
+off `.lead-card` and would otherwise begin a drag with an undefined lead id.
+`loadLeads()` also de-duplicates: opening the Leads tab, the Coach
+attach-combobox and the Refresh button share one in-flight request. Refresh,
+Add lead, Import CSV and Find leads are all disabled for the duration — each
+one's success handler calls `renderBoard()`, which mid-load would paint
+skeletons over the fresh result, and the in-flight GET (issued before the
+insert) would then land last and drop the new rows.
 
 **Dashboard honesty rules, as implemented:** rows with `status = "error"` are
 excluded from activity counts (a retry after an error would double-count);
@@ -424,5 +437,7 @@ routes run on Vercel's default Node budget.
   bulk import (500 rows), not by these two reads.
 - The filler regex is deliberately loose; tightening it is deferred to the
   migration and requires a `METRICS_VERSION` bump (§3).
-- Loading states missing on the Leads board and thin on delete/import (§4).
+- Loading states are still thin on delete call, CSV import and the transcript
+  panel — button-disabled or a borrowed status line, no dedicated text or
+  skeleton (§4). The Leads board gap is closed.
 - `SUPABASE-SETUP.md` lags the schema the code actually uses (§6.6).
