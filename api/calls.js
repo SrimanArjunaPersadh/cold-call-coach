@@ -38,30 +38,38 @@ function getQuery(req, key) {
 // Remove one object from the recordings bucket with the service-role key
 // (server-side only — this key never reaches the browser).
 //
-// Returns "deleted", or "missing" when Storage says the object isn't there:
-// an already-gone recording is the state the caller wanted, so that's success.
-// A 404 for a *bucket* that doesn't exist is a config problem, not a
-// successful cleanup — it throws, so the caller keeps the row and the delete
-// stays retryable.
+// Returns "deleted", or "missing" when the object is already gone — that's
+// the state the caller wanted, so it counts as success. Anything else throws,
+// so the caller keeps the row and the delete stays retryable.
 async function deleteStorageObject(storagePath) {
   const url = requireEnv("SUPABASE_URL").replace(/\/$/, "");
   const serviceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const bucket = getBucket();
+  const auth = { apikey: serviceKey, authorization: `Bearer ${serviceKey}` };
 
   const res = await fetch(
     `${url}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeStoragePath(storagePath)}`,
-    {
-      method: "DELETE",
-      headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` },
-    }
+    { method: "DELETE", headers: auth }
   );
 
   if (res.ok) return "deleted";
-  if (res.status === 404) {
-    const text = await res.text().catch(() => "");
-    if (/bucket/i.test(text)) throw new Error("Storage bucket not found");
-    return "missing";
+
+  // Storage reports a missing object as HTTP 400 + {"error":"not_found"} (not
+  // a 404) — and answers a missing *bucket* with that byte-identical body. So
+  // this response on its own cannot tell "already cleaned up" from "pointed at
+  // the wrong bucket". The bucket endpoint does distinguish them, so ask it:
+  // only a genuinely-absent object inside a real bucket is success. A bad
+  // bucket has to throw, or a config slip would silently drop rows whose
+  // recordings are still sitting in Storage.
+  const text = await res.text().catch(() => "");
+  if (/not_found/i.test(text)) {
+    const probe = await fetch(`${url}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
+      headers: auth,
+    });
+    if (probe.ok) return "missing";
+    throw new Error("Storage bucket not found");
   }
+
   throw new Error(`Storage delete failed: ${res.status}`);
 }
 
