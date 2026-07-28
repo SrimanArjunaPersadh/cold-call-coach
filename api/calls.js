@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
       const rows = await supabaseFetch(
         `/rest/v1/calls?user_id=eq.${encodeURIComponent(userId)}` +
           `&lead_id=eq.${encodeURIComponent(leadId)}` +
-          `&select=id,created_at,status,rubric_scores,transcript,rep_speaker` +
+          `&select=id,created_at,status,rubric_scores,transcript,rep_speaker,metrics` +
           `&order=created_at.desc`
       );
       return json(res, 200, { calls: rows || [] });
