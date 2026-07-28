@@ -1,3 +1,6 @@
+> SUPERSEDED 2026-07-28. This document is preserved as the historical
+> design record. For what actually exists, see STATUS.md.
+
 # Cold-Call Coach — Phase 1 Design Doc
 
 **Goal of this phase:** prove the full loop on ONE real call, end to end.
