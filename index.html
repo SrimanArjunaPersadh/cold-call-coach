@@ -647,6 +647,14 @@
     .call-detail { padding: 4px 12px 12px; }
     .call-detail .score-summary { margin-top: 4px; }
     .call-transcript { margin-top: 4px; }
+    /* Same tiles as the Coach panel, sized down so all three fit the modal
+       column on a phone without wrapping or overflowing. */
+    .call-metrics { margin: 8px 0 12px; }
+    .call-metrics .metric-grid { gap: 6px; flex-wrap: nowrap; }
+    .call-metrics .metric-tile { flex: 1 1 0; min-width: 0; padding: 8px 10px; }
+    .call-metrics .metric-value { font-size: 17px; }
+    .call-metrics .metric-sub { font-size: 11px; }
+    .call-metrics .metric-caveat { margin-top: 8px; font-size: 11px; }
 
     /* ── Dashboard (read-only metrics) ────────────────────── */
     .dash {
@@ -1487,6 +1495,40 @@
         &ldquo;so&rdquo;, &ldquo;like&rdquo; and &ldquo;right&rdquo; inflate the count.</p>`;
   }
 
+  // Same three tiles, read-only: the lead card's call history shows metrics
+  // that were computed in the browser at scoring time and persisted, so this
+  // only formats a stored object — no recomputation, no turns needed. Calls
+  // saved before metrics existed pass null and render nothing.
+  function storedMetricsHtml(m) {
+    if (!m || !m.talk_listen) return '';
+
+    const pct = m.talk_listen.rep_pct;
+    const perMin = m.fillers ? m.fillers.per_minute : null;
+    return `
+      <div class="call-metrics">
+        <div class="metric-grid">
+          <div class="metric-tile">
+            <div class="metric-value">${pct === null || pct === undefined ? '&mdash;' : `~${pct}%`}</div>
+            <div class="metric-label">You talking <span class="estimate-tag">ESTIMATE</span></div>
+            <div class="metric-sub">${fmtTime(Number(m.talk_listen.rep_seconds) || 0)} of ${fmtTime(Number(m.talk_listen.total_seconds) || 0)} spoken.</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-value">${fmtTime(Number(m.longest_monologue_seconds) || 0)}</div>
+            <div class="metric-label">Longest monologue</div>
+            <div class="metric-sub">Your longest unbroken stretch.</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-value">${m.fillers ? m.fillers.count : '&mdash;'}</div>
+            <div class="metric-label">Filler words</div>
+            <div class="metric-sub">${perMin === null || perMin === undefined ? 'Rate unavailable.' : `${perMin} per minute of your speech.`}</div>
+          </div>
+        </div>
+        <p class="metric-caveat">Talk-to-listen is an estimate &mdash; one mixed-mono track can't
+          cleanly attribute overlapping speech. Fillers are a plain word match, so conversational
+          &ldquo;so&rdquo;, &ldquo;like&rdquo; and &ldquo;right&rdquo; inflate the count.</p>
+      </div>`;
+  }
+
   // ══ Rep identity + persistence (§2 #3, §9 step 7) ══════════════════
   // Default: whoever speaks first is the rep — on an outbound cold call that's
   // you ~95% of the time. The swap button fixes the rest with zero model calls.
@@ -1783,6 +1825,7 @@
             <span class="call-topfix">${escapeHtml(topFix)}</span>
           </summary>
           <div class="call-detail">
+            ${storedMetricsHtml(c.metrics)}
             ${scoresHtml(scores)}
             <div class="call-transcript">${transcriptHtml(c.transcript, c.rep_speaker)}</div>
           </div>
