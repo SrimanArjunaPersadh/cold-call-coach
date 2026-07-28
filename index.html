@@ -655,6 +655,22 @@
     .call-metrics .metric-value { font-size: 17px; }
     .call-metrics .metric-sub { font-size: 11px; }
     .call-metrics .metric-caveat { margin-top: 8px; font-size: 11px; }
+    /* Deliberately quiet: this button sits under real transcript data, so it
+       reads as secondary until you hover it. (The pointer:coarse rule at the
+       top of the sheet lifts every button to a 44px tap target on a phone.) */
+    .call-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .call-delete {
+      appearance: none; cursor: pointer; background: transparent; color: var(--text-lo);
+      border: 1px solid var(--border); border-radius: 8px;
+      min-height: 34px; padding: 6px 12px; font-size: 12px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .call-delete:hover:not(:disabled) {
+      color: var(--err); background: var(--bg-3);
+      border-color: color-mix(in srgb, var(--err) 45%, transparent);
+    }
+    .call-delete:disabled { opacity: 0.45; cursor: not-allowed; }
 
     /* ── Dashboard (read-only metrics) ────────────────────── */
     .dash {
@@ -1828,10 +1844,40 @@
             ${storedMetricsHtml(c.metrics)}
             ${scoresHtml(scores)}
             <div class="call-transcript">${transcriptHtml(c.transcript, c.rep_speaker)}</div>
+            <div class="call-actions">
+              <button type="button" class="call-delete" data-call-id="${escapeHtml(String(c.id))}">
+                <span aria-hidden="true">🗑</span> Delete call
+              </button>
+            </div>
           </div>
         </details>`;
     }).join('');
   }
+
+  // Delete one call + its recording. Delegated, because renderLeadCalls
+  // replaces this subtree on every load. The storage object is removed
+  // server-side (service-role key never touches the browser); we only
+  // re-read the list afterwards.
+  leadCallsEls.body.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.call-delete');
+    if (!btn) return;
+    const callId = btn.dataset.callId;
+    if (!callId) return;
+    if (!confirm("Delete this call and its recording? This can't be undone.")) return;
+
+    const leadId = crm.editingId;
+    btn.disabled = true;
+    try {
+      await leadsApi(`/api/calls?id=${encodeURIComponent(callId)}`, { method: 'DELETE' }, 'Could not delete call');
+      toast('Call deleted', 'ok');
+      if (crm.editingId === leadId) await loadLeadCalls(leadId);
+    } catch (err) {
+      // The row survives a failed storage cleanup, so re-enable and let the
+      // user retry rather than leaving a dead button.
+      btn.disabled = false;
+      toast(err.message || 'Could not delete call', 'err');
+    }
+  });
 
   // ══ Shared-secret lock ═════════════════════════════════════════════
   // Personal single-user lock for the public Vercel URL. The passphrase lives
