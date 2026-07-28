@@ -525,6 +525,7 @@
     }
     .toast.err { border-color: color-mix(in srgb, var(--err) 55%, transparent); }
     .toast.ok  { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+    .toast.warn { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
     .secret-error { color: var(--err); font-size: 12px; min-height: 1em; margin: 8px 0 0; }
 
     /* ── CSV import ─────────────────────────────── */
@@ -1478,7 +1479,7 @@
     // so withhold them loudly instead of printing confident nonsense.
     if (distinctSpeakers(turns).length < 2) {
       return `<p class="metric-warn"><strong>Diarization returned a single speaker.</strong>
-        Talk-to-listen, longest monologue and filler rate all need your voice separated from
+        Talk share, longest monologue and filler rate all need your voice separated from
         the prospect's, so they're withheld for this call rather than shown wrong. The
         transcript above and the call-level scores below are unaffected.</p>`;
     }
@@ -1492,8 +1493,8 @@
       <div class="metric-grid">
         <div class="metric-tile">
           <div class="metric-value">${pct === null ? '&mdash;' : `~${pct}%`}</div>
-          <div class="metric-label">You talking <span class="estimate-tag">ESTIMATE</span></div>
-          <div class="metric-sub">${fmtTime(m.talk_listen.rep_seconds)} of ${fmtTime(m.talk_listen.total_seconds)} spoken.</div>
+          <div class="metric-label">Talk share <span class="estimate-tag">ESTIMATE</span></div>
+          <div class="metric-sub">of spoken time &mdash; ${fmtTime(m.talk_listen.rep_seconds)} of ${fmtTime(m.talk_listen.total_seconds)} in turns, not call length.</div>
         </div>
         <div class="metric-tile">
           <div class="metric-value">${fmtTime(m.longest_monologue_seconds)}</div>
@@ -1506,7 +1507,7 @@
           <div class="metric-sub">${perMin === null ? 'Rate unavailable.' : `${perMin} per minute of your speech.`}</div>
         </div>
       </div>
-      <p class="metric-caveat">Talk-to-listen is an estimate &mdash; one mixed-mono track can't
+      <p class="metric-caveat">Talk share is an estimate &mdash; one mixed-mono track can't
         cleanly attribute overlapping speech. Fillers are a plain word match, so conversational
         &ldquo;so&rdquo;, &ldquo;like&rdquo; and &ldquo;right&rdquo; inflate the count.</p>`;
   }
@@ -1525,8 +1526,8 @@
         <div class="metric-grid">
           <div class="metric-tile">
             <div class="metric-value">${pct === null || pct === undefined ? '&mdash;' : `~${pct}%`}</div>
-            <div class="metric-label">You talking <span class="estimate-tag">ESTIMATE</span></div>
-            <div class="metric-sub">${fmtTime(Number(m.talk_listen.rep_seconds) || 0)} of ${fmtTime(Number(m.talk_listen.total_seconds) || 0)} spoken.</div>
+            <div class="metric-label">Talk share <span class="estimate-tag">ESTIMATE</span></div>
+            <div class="metric-sub">of spoken time &mdash; ${fmtTime(Number(m.talk_listen.rep_seconds) || 0)} of ${fmtTime(Number(m.talk_listen.total_seconds) || 0)} in turns, not call length.</div>
           </div>
           <div class="metric-tile">
             <div class="metric-value">${fmtTime(Number(m.longest_monologue_seconds) || 0)}</div>
@@ -1539,7 +1540,7 @@
             <div class="metric-sub">${perMin === null || perMin === undefined ? 'Rate unavailable.' : `${perMin} per minute of your speech.`}</div>
           </div>
         </div>
-        <p class="metric-caveat">Talk-to-listen is an estimate &mdash; one mixed-mono track can't
+        <p class="metric-caveat">Talk share is an estimate &mdash; one mixed-mono track can't
           cleanly attribute overlapping speech. Fillers are a plain word match, so conversational
           &ldquo;so&rdquo;, &ldquo;like&rdquo; and &ldquo;right&rdquo; inflate the count.</p>
       </div>`;
@@ -2567,7 +2568,20 @@
       const text = await file.text();
       const table = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ''));
       if (table.length < 2) { toast('CSV needs a header row and at least one data row', 'err'); return; }
-      importState.headers = table[0].map((h) => h.trim());
+
+      // A renamed PNG still parses into plausible-looking "rows", so refuse the
+      // file outright rather than let it reach mapping looking like progress.
+      // Two tells: a header row carrying binary (replacement chars or ASCII
+      // control bytes, tab excepted), or headers that map to no field at all.
+      const HEADER_BINARY_RE = /[\uFFFD\x00-\x08\x0A-\x1F]/; // ctrl bytes, tab excepted
+      const headers = table[0].map((h) => h.trim());
+      const headerJunk = table[0].some((h) => HEADER_BINARY_RE.test(h));
+      if (headerJunk || Object.keys(autoMap(headers)).length === 0) {
+        toast("That doesn't look like a CSV file.", 'err');
+        return;
+      }
+
+      importState.headers = headers;
       importState.rows = table.slice(1);
       importEls.filename.textContent = `${file.name} · ${importState.rows.length} data rows`;
       renderImportMapping();
@@ -2720,10 +2734,12 @@
     renderBoard();
     closeScrapeModal();
     const belowMin = data.belowMin || 0;
+    // Nothing added is not a success, whatever the filters did — don't dress a
+    // zero-outcome run in the same green as a run that produced leads.
     toast(
       `${data.added} added, ${data.skipped} duplicate${data.skipped === 1 ? '' : 's'} skipped` +
       (belowMin ? `, ${belowMin} below review minimum` : ''),
-      'ok'
+      data.added === 0 ? 'warn' : 'ok'
     );
   });
 
