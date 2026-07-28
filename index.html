@@ -450,6 +450,17 @@
       color: var(--text-lo); font-size: 12px; text-align: center;
       border: 1px dashed var(--border); border-radius: 8px; padding: 14px 4px;
     }
+    /* Loading placeholders. Deliberately NOT .lead-card — the board's pointerdown
+       handler keys off that class and would start a drag with an undefined id.
+       Base opacity carries the state on its own, so the global
+       prefers-reduced-motion rule (which kills the animation) still reads right. */
+    .card-skeleton {
+      height: 62px; border-radius: var(--radius);
+      background: var(--bg-2); border: 1px solid var(--border);
+      opacity: 0.55; animation: skeleton-pulse 1.3s ease-in-out infinite;
+    }
+    .card-skeleton + .card-skeleton { animation-delay: 0.18s; }
+    @keyframes skeleton-pulse { 0%, 100% { opacity: 0.38; } 50% { opacity: 0.75; } }
 
     .lead-card {
       background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
@@ -2038,12 +2049,14 @@
     { key: 'industry', label: 'Industry',     type: 'text' },
   ];
 
-  const crm = { leads: [], loaded: false, editingId: null, dragId: null };
+  const crm = { leads: [], loaded: false, loading: false, editingId: null, dragId: null };
   const crmEls = {
     board:      document.getElementById('board'),
     total:      document.getElementById('leads-total'),
     addBtn:     document.getElementById('add-lead-btn'),
     refreshBtn: document.getElementById('leads-refresh'),
+    importBtn:  document.getElementById('import-csv-btn'),
+    findBtn:    document.getElementById('find-leads-btn'),
     modal:      document.getElementById('lead-modal'),
     modalTitle: document.getElementById('lead-modal-title'),
     form:       document.getElementById('lead-form'),
@@ -2115,29 +2128,73 @@
   // Normalise for the href only (stored text is untouched): add a scheme if missing.
   const normalizeHref = (u) => { const v = String(u).trim(); return /^https?:\/\//i.test(v) ? v : `https://${v}`; };
 
-  async function loadLeads() {
+  // Three callers can ask for leads at once — opening the Leads tab, the Coach
+  // attach-combobox (which awaits this and then reads crm.leads), and Refresh.
+  // They share one request: a second caller awaits the first rather than firing
+  // a duplicate GET or returning early with crm.leads still empty.
+  let leadsInFlight = null;
+  function loadLeads() {
+    if (!leadsInFlight) {
+      leadsInFlight = fetchLeads().finally(() => { leadsInFlight = null; });
+    }
+    return leadsInFlight;
+  }
+
+  // All four toolbar buttons either refetch the board or mutate it. Leaving them
+  // live during a fetch lets a success handler call renderBoard() mid-load (which
+  // paints skeletons over the fresh result), and lets the in-flight GET — issued
+  // before the insert — land last and drop the new rows.
+  function setBoardControlsDisabled(disabled) {
+    [crmEls.refreshBtn, crmEls.addBtn, crmEls.importBtn, crmEls.findBtn]
+      .forEach((b) => { if (b) b.disabled = disabled; });
+  }
+
+  async function fetchLeads() {
+    crm.loading = true;
+    setBoardControlsDisabled(true);
+    crmEls.board.setAttribute('aria-busy', 'true');
+    renderBoard(); // six columns + skeletons; counts withheld, not shown as 0
+    let error = null;
     try {
       const data = await leadsApi('/api/leads', undefined, 'Could not load leads');
       crm.leads = data.leads || [];
       crm.loaded = true;
-      renderBoard();
     } catch (err) {
-      crmEls.board.innerHTML = `<p class="board-hint">${escapeHtml(err.message)}</p>`;
+      error = err;
     }
+    crm.loading = false;
+    setBoardControlsDisabled(false);
+    crmEls.board.removeAttribute('aria-busy');
+    if (error) {
+      // Board is replaced by the message, so the header count has to be put back
+      // by hand — renderBoard() is the only other thing that writes it.
+      crmEls.total.textContent = crm.leads.length;
+      crmEls.board.innerHTML = `<p class="board-hint">${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    renderBoard();
   }
 
+  // Two per column: reads as "a list is coming" without towering over the real
+  // cards that replace them.
+  const SKELETON_CARDS = '<div class="card-skeleton"></div>'.repeat(2);
+
   function renderBoard() {
-    crmEls.total.textContent = crm.leads.length;
+    // While loading, every count is unknown — printing 0 would say "no leads",
+    // which is exactly the state the loading view has to stay distinct from.
+    crmEls.total.textContent = crm.loading ? '·' : crm.leads.length;
     crmEls.board.innerHTML = STAGES.map((stage) => {
       const items = crm.leads
         .filter((l) => (l.stage || 'new') === stage.key)
         .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
-      const cards = items.length
-        ? items.map(cardHtml).join('')
-        : '<div class="col-empty">Drop leads here</div>';
+      const cards = crm.loading
+        ? SKELETON_CARDS
+        : items.length
+          ? items.map(cardHtml).join('')
+          : '<div class="col-empty">Drop leads here</div>';
       return `
         <div class="col" style="--col:${stage.color}">
-          <div class="col-head"><span>${stage.label}</span><span class="count">${items.length}</span></div>
+          <div class="col-head"><span>${stage.label}</span><span class="count">${crm.loading ? '·' : items.length}</span></div>
           <div class="col-body" data-stage="${stage.key}">${cards}</div>
         </div>`;
     }).join('');
